@@ -8,6 +8,9 @@ import { MemberModule } from './modules/member/member.module';
 import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { InvitationModule } from './modules/invitation/invitation.module';
 import { ApplicationModule } from './modules/application/application.module';
+import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
+import { GlobalExceptionFilter } from './core/filters/global-exception.filter';
+import { TransformInterceptor } from './core/interceptor/transform.interceptor';
 
 /**
  * The root module of the application and the starting point.
@@ -25,6 +28,18 @@ import { ApplicationModule } from './modules/application/application.module';
     AnalyticsModule,
     InvitationModule,
     ApplicationModule,
+  ],
+  providers: [
+    {
+      // Registers the GlobalExceptionFilter globally
+      provide: APP_FILTER,
+      useClass: GlobalExceptionFilter,
+    },
+    {
+      // Registers the TransformInterceptor globally
+      provide: APP_INTERCEPTOR,
+      useClass: TransformInterceptor,
+    },
   ],
 })
 export class AppModule {}

@@ -12,6 +12,7 @@ export const envValidationSchema = Joi.object({
     .valid('development', 'production', 'test')
     .default('development'),
   PORT: Joi.number().default(5050),
+  BASE_URL: Joi.string().default('http://localhost:5050'),
 
   // --- Security & Auth ---
   JWT_ACCESS_SECRET: Joi.string().required(),
@@ -29,4 +30,7 @@ export const envValidationSchema = Joi.object({
   MAILER_USER: Joi.string().required(),
   MAILER_PASS: Joi.string().required(),
   MAILER_FROM_ADDRESS: Joi.string().email().required(),
+
+  // --- Tokens life time ---
+  EMAIL_VERIFY_TOKEN_EXPIRES_IN: Joi.string().required().default('1h'),
 });
