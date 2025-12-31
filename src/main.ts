@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import { ValidationPipe } from '@nestjs/common';
 import helmet from 'helmet';
+import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
@@ -24,12 +25,13 @@ async function bootstrap() {
       ? { origin: configService.get<string>('CORS_ORIGIN') }
       : true;
 
-  app.setGlobalPrefix('api');
+  app.setGlobalPrefix('api/v1');
 
   // --- Configure Swagger (OpenAPI) Documentation ---
   const swaggerConfig = new DocumentBuilder()
     .setTitle('Shalaboka_AI API')
     .setVersion('1.0')
+    .addBearerAuth()
     .build();
   const document = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('docs', app, document); // api/docs
@@ -49,6 +51,9 @@ async function bootstrap() {
       },
     }),
   );
+
+  // 1. Must use cookie-parser to see the 'cookies' object
+  app.use(cookieParser());
 
   app.enableShutdownHooks();
 

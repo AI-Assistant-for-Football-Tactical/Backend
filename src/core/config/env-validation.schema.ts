@@ -13,12 +13,13 @@ export const envValidationSchema = Joi.object({
     .default('development'),
   PORT: Joi.number().default(5050),
   BASE_URL: Joi.string().default('http://localhost:5050'),
+  API: Joi.string().default('api/v1'),
 
   // --- Security & Auth ---
-  JWT_ACCESS_SECRET: Joi.string().required(),
-  JWT_ACCESS_EXPIRES_IN: Joi.string().default('15m'),
-  JWT_REFRESH_SECRET: Joi.string().required(),
-  JWT_REFRESH_EXPIRES_IN: Joi.string().default('7d'),
+  ACCESS_TOKEN_SECRET: Joi.string().required(),
+  ACCESS_TOKEN_TTL: Joi.number().required().default(900), // 15 min
+  REFRESH_TOKEN_SECRET: Joi.string().required(),
+  REFRESH_TOKEN_TTL: Joi.number().required().default(604800), // 7 days
   CORS_ORIGIN: Joi.string().required(),
 
   // --- DataBase - PostgreSQL ---
@@ -32,5 +33,8 @@ export const envValidationSchema = Joi.object({
   MAILER_FROM_ADDRESS: Joi.string().email().required(),
 
   // --- Tokens life time ---
-  EMAIL_VERIFY_TOKEN_EXPIRES_IN: Joi.string().required().default('1h'),
+  EMAIL_VERIFY_TOKEN_TTL: Joi.number().required().default(900),
+
+  // --- Reset Password Token ---
+  PASSWORD_RESET_TOKEN_TTL: Joi.number().required().default(900),
 });

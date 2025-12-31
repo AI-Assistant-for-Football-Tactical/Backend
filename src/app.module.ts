@@ -8,9 +8,11 @@ import { MemberModule } from './modules/member/member.module';
 import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { InvitationModule } from './modules/invitation/invitation.module';
 import { ApplicationModule } from './modules/application/application.module';
-import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
-import { TransformInterceptor } from './common/interceptor/transform.interceptor';
+import { TransformResponseInterceptor } from './common/interceptor/transform.interceptor';
+import { RolesGuard } from './modules/auth/guards/roles.guard';
+import { JwtAuthGuard } from './modules/auth/guards/jwt.guard';
 
 /**
  * The root module of the application and the starting point.
@@ -36,14 +38,24 @@ import { TransformInterceptor } from './common/interceptor/transform.interceptor
       useClass: GlobalExceptionFilter,
     },
     {
-      // Registers the TransformInterceptor globally
+      // Registers the TransformResponseInterceptor globally
       provide: APP_INTERCEPTOR,
-      useClass: TransformInterceptor,
+      useClass: TransformResponseInterceptor,
     },
     {
-      // Registers the TransformInterceptor globally
+      // Registers the ClassSerializerInterceptor globally
       provide: APP_INTERCEPTOR,
       useClass: ClassSerializerInterceptor,
+    },
+    {
+      // Registers the JwtAuthGuard globally
+      provide: APP_GUARD,
+      useClass: JwtAuthGuard,
+    },
+    {
+      // Registers the RolesGuard globally
+      provide: APP_GUARD,
+      useClass: RolesGuard,
     },
   ],
 })

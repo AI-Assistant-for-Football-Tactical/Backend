@@ -122,6 +122,6 @@ export class UsersController {
 
 ## Interceptor and Filter Responsibility
 
-- **`TransformInterceptor`:** Automatically wraps the returned data with `success: true`, `statusCode`, `timestamp`, and the message read from the `@ResponseMessage` decorator.
+- **`TransformResponseInterceptor`:** Automatically wraps the returned data with `success: true`, `statusCode`, `timestamp`, and the message read from the `@ResponseMessage` decorator.
 
 - **`GlobalExceptionFilter`:** Catches all thrown exceptions (e.g., `NotFoundException`, `UnauthorizedException`) and formats them into the standard error structure (with `success: false` and the `messages` array).

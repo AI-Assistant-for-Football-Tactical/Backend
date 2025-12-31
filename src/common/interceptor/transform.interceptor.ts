@@ -1,4 +1,3 @@
-// src/common/interceptors/transform.interceptor.ts
 import {
   Injectable,
   NestInterceptor,
@@ -9,19 +8,17 @@ import { Reflector } from '@nestjs/core';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { RESPONSE_MESSAGE_KEY } from '../decorators/response-message.decorator';
-import { ISuccessResponse } from '../interfaces/response.interface';
+import { SuccessResponseDto } from '../dtos/success-response.dto';
 import type { Response } from 'express';
 
 @Injectable()
-export class TransformInterceptor<T>
-  implements NestInterceptor<T, ISuccessResponse<T>>
-{
-  constructor(private reflector: Reflector) {}
+export class TransformResponseInterceptor implements NestInterceptor {
+  constructor(private readonly reflector: Reflector) {}
 
   intercept(
     context: ExecutionContext,
     next: CallHandler,
-  ): Observable<ISuccessResponse<T>> {
+  ): Observable<SuccessResponseDto> {
     const response: Response = context.switchToHttp().getResponse();
     const customMessage = this.reflector.get<string>(
       RESPONSE_MESSAGE_KEY,
@@ -29,13 +26,15 @@ export class TransformInterceptor<T>
     );
 
     return next.handle().pipe(
-      map((data: T) => ({
-        success: true,
-        statusCode: response.statusCode,
-        message: customMessage || 'Request successful',
-        data: data || null,
-        timestamp: new Date().toISOString(),
-      })),
+      map((data: unknown): SuccessResponseDto => {
+        return {
+          statusCode: response.statusCode,
+          timestamp: new Date().toISOString(),
+          success: true,
+          message: customMessage || 'Request successful',
+          data: data || null,
+        };
+      }),
     );
   }
 }
