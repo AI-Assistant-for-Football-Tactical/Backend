@@ -173,26 +173,31 @@ export class AuthService {
       throw new BadRequestException('User not found');
     }
 
-    const storedToken: Token | null = await this.tokenRepo.findOne({
+    const verifyToken: Token | null = await this.tokenRepo.findOne({
       where: {
+        token_hash: this.tokenService.hashToken(token),
         user_id: user.id,
         type: TokenType.EMAIL_VERIFY,
+        expires_at: MoreThan(new Date()),
       },
     });
 
-    if (
-      !storedToken ||
-      storedToken.token_hash !== this.tokenService.hashToken(token)
-    ) {
+    if (!verifyToken) {
       throw new BadRequestException('Invalid or expired verification token');
     }
 
     user.is_verified = true;
+    user.status = AccountStatus.ACTIVE;
     user.last_security_action_at = new Date();
-    await this.userRepo.save(user);
-    await this.tokenRepo.remove(storedToken);
+    await Promise.all([
+      this.tokenRepo.remove(verifyToken),
+      this.userRepo.save(user),
+    ]);
 
-    // this.eventEmitter.emit('security-update');
+    this.eventEmitter.emit('security-update', {
+      user_id: user.id,
+      action: 'email-verified',
+    });
 
     return user;
   }
