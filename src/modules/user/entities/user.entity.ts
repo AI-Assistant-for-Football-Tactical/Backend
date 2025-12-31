@@ -65,8 +65,8 @@ export class User {
   @OneToMany(() => Token, (token) => token.user)
   tokens: Token[];
 
-  @Column({ type: 'timestamp', nullable: true })
-  lastSecurityAction: Date;
+  @Column({ type: 'timestamptz', default: new Date() })
+  last_security_action_at: Date;
 
   @Column({ nullable: true })
   profile_image_url: string;

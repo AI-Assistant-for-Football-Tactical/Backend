@@ -27,10 +27,23 @@ export class UserController {
 
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.userService.findOne(+id);
+    return this.userService.findOneById(id);
   }
 
+  // @Get(':id')
+  // findOne(@Param('id') id: string) {
+  //   return this.userService.findOne(+id);
+  // }
+
   @Patch(':id')
+  /*************  ✨ Codeium Command ⭐  *************/
+  /**
+   * Updates a user by its id
+   * @param id user's id
+   * @param updateUserDto user's data to update
+   * @returns updated user
+   */
+  /******  d0d1ef79-c121-4d45-8284-a465e324d94d  *******/
   update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
     return this.userService.update(+id, updateUserDto);
   }
