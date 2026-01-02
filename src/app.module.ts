@@ -1,4 +1,5 @@
 import { ClassSerializerInterceptor, Module } from '@nestjs/common';
+import { AppController } from './app.controller';
 import { CoreModule } from './core/core.module';
 import { UserModule } from './modules/user/user.module';
 import { AuthModule } from './modules/auth/auth.module';
@@ -19,6 +20,7 @@ import { JwtAuthGuard } from './modules/auth/guards/jwt.guard';
  *
  * It imports all other.
  */
+
 @Module({
   imports: [
     CoreModule,
@@ -31,6 +33,7 @@ import { JwtAuthGuard } from './modules/auth/guards/jwt.guard';
     InvitationModule,
     ApplicationModule,
   ],
+  controllers: [AppController],
   providers: [
     {
       // Registers the GlobalExceptionFilter globally

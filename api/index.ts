@@ -2,24 +2,19 @@ import { NestFactory } from '@nestjs/core';
 import { ExpressAdapter } from '@nestjs/platform-express';
 import { AppModule } from '../src/app.module';
 import { setupApp } from '../src/setup';
-import express from 'express';
+import express, { type Request, type Response } from 'express';
 
-const app = express();
+const server = express();
 
-const createNestServer = async (expressInstance: express.Express) => {
-  const nestApp = await NestFactory.create(
-    AppModule,
-    new ExpressAdapter(expressInstance),
-  );
-  setupApp(nestApp);
-  await nestApp.init();
-  return nestApp;
+const bootstrap = async () => {
+  const app = await NestFactory.create(AppModule, new ExpressAdapter(server));
+  setupApp(app);
+  await app.init();
 };
 
-// Initialize the app
-createNestServer(app)
-  .then(() => console.log('NestJS App Initialized'))
-  .catch((err) => console.error('NestJS App Initialization Failed', err));
+const bootstrapPromise = bootstrap();
 
-// Export the app for Vercel
-export default app;
+export default async (req: Request, res: Response) => {
+  await bootstrapPromise;
+  server(req, res);
+};
