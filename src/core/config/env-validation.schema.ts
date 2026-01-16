@@ -10,7 +10,7 @@ import { AppEnv } from '../../common/constants/app.constants';
 export const envValidationSchema = Joi.object({
   // --- App Config ---
   NODE_ENV: Joi.string()
-    .valid(AppEnv.DEVELOPMENT, AppEnv.PRODUCTION, AppEnv.TEST)
+    .valid(AppEnv.DEVELOPMENT, AppEnv.PRODUCTION, AppEnv.TESTING)
     .default(AppEnv.DEVELOPMENT),
   PORT: Joi.number().default(5050),
   BASE_URL: Joi.string().default('http://localhost:5050'),
