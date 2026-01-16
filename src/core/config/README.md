@@ -2,40 +2,60 @@
 
 This module is responsible for loading, parsing, and validating all application environment variables from the `.env` file.
 
-## 1\. What it is?
+## 1. Features
 
-This module uses the official `@nestjs/config` package to:
+- **Type Safety**: Provides strongly-typed configuration classes (e.g., `AppConfig`, `DatabaseConfig`) instead of generic `ConfigService` lookups.
+- **Validation**: Uses **Joi** schema validation to ensure all required environment variables are present and correct.
+- **JSDocs**: All methods are fully documented for better developer experience (IntelliSense).
+- **Global Access**: The `ConfigModule` is global, so you can inject config classes anywhere without importing `ConfigModule`.
 
-1.  Load variables from a `.env` file (e.g., `.env.development.local`).
-2.  Validate these variables against a **Joi** schema.
-3.  Make the `ConfigService` available globally, so any other module can securely access environment variables like `DATABASE_URL` or `JWT_SECRET`.
+## 2. Available Configurations
 
-If a required environment variable (like `DATABASE_URL`) is missing or invalid, this module will **throw an error and stop the app from starting**.
+The module exports the following configuration services:
 
-## 2\. What's Inside?
+- `AppConfig`: Application-level settings (env, port, base URL, CORS).
+- `DatabaseConfig`: Database connection URL.
+- `MailConfig`: Mailer settings (host, port, user, auth).
+- `TokenConfig`: Token secrets and TTLs (JWT, reset password, etc.).
 
-- **`config.module.ts`**: Imports and configures the `NestConfigModule.forRoot()` method, telling it where to find the `.env` file and what validation schema to use.
-- **`validation.schema.ts`**: Contains the **Joi** validation schema. This is the "rulebook" that defines all required and optional environment variables and their types.
+## 3. How to Use
 
-## 3\. How to Use
+Inject the specific configuration class you need into your constructor. **Do not use `ConfigService` directly.**
 
-This module is imported by `CoreModule` and marked as `@Global()`, so you **do not need to import it** in your feature modules.
-
-To use the `ConfigService` in any other service (e.g., `AuthService`), just inject it in the constructor:
+### Example
 
 ```typescript
-// src/auth/auth.service.ts
 import { Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { AppConfig } from 'src/core/config/configrations/app.config';
+import { DatabaseConfig } from 'src/core/config/configrations/database.config';
 
 @Injectable()
-export class AuthService {
-  // 1. Inject ConfigService in your constructor
-  constructor(private readonly configService: ConfigService) {}
+export class ExampleService {
+  constructor(
+    private readonly appConfig: AppConfig,
+    private readonly dbConfig: DatabaseConfig,
+  ) {}
 
-  login() {
-    // 2. use it to get you config variables
-    const jwtSecret = This.configService.get<string>('JWT_SECRET');
+  someMethod() {
+    // Access typed properties directly
+    if (this.appConfig.isProduction) {
+      console.log('Running in production');
+    }
+
+    const dbUrl = this.dbConfig.url;
+    console.log(`Connecting to: ${dbUrl}`);
   }
+}
+```
+
+## 4. Environment Variables
+
+The `env-validation.schema.ts` defines the allowed variables. Key enums like `AppEnv` are used for validation:
+
+```typescript
+export enum AppEnv {
+  DEVELOPMENT = 'development',
+  PRODUCTION = 'production',
+  TESTING = 'testing',
 }
 ```
