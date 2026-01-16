@@ -36,10 +36,9 @@ export class TokenService {
 
     // Handle expiration calculation if not provided
     if (!tokenDto.expires_at) {
-      // Expects TTL in SECONDS from .env (e.g., REFRESH_TOKEN_TTL=604800)
-      const tokenExpiresInSeconds = this.tokenConfig.tokenTtl(tokenDto.type);
+      const tokenTtl: number = this.tokenConfig.tokenTtl(tokenDto.type); // in milliseconds
 
-      tokenDto.expires_at = new Date(Date.now() + tokenExpiresInSeconds * 1000);
+      tokenDto.expires_at = new Date(Date.now() + tokenTtl);
     }
 
     /**
@@ -55,7 +54,6 @@ export class TokenService {
 
     try {
       const tokenInstance = this.tokenRepo.create(tokenData);
-      console.log(tokenInstance);
       return await this.tokenRepo.save(tokenInstance);
     } catch (err) {
       this.logger.error('Failed to persist token record', err);

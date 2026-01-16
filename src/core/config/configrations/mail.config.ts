@@ -1,9 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { TokenConfig } from './token.config';
 
 @Injectable()
 export class MailConfig {
-  constructor(private configService: ConfigService) {}
+  constructor(
+    private configService: ConfigService,
+    private tokenConfig: TokenConfig,
+  ) {}
 
   get host(): string {
     return this.configService.get<string>('MAILER_HOST')!;
@@ -26,6 +30,6 @@ export class MailConfig {
   }
 
   get verifyTokenTtl(): number {
-    return this.configService.get<number>('EMAIL_VERIFY_TOKEN_TTL')!;
+    return this.tokenConfig.emailVerifyTtl;
   }
 }
