@@ -1,7 +1,7 @@
 import { NestFactory } from '@nestjs/core';
-import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
 import { setupApp } from './setup';
+import { AppConfig } from './core/config';
 
 /**
  * The main entry point of the application.
@@ -21,13 +21,13 @@ async function bootstrap() {
 
   app.enableShutdownHooks();
 
-  const configService = app.get(ConfigService);
+  const appConfig = app.get(AppConfig);
 
-  await app.listen(configService.get('PORT') || 5050);
+  await app.listen(appConfig.port);
 
   console.log(
-    `\x1b[36mNODE_ENV:\x1b[0m \x1b[33m${configService.get('NODE_ENV')}\x1b[0m`,
-    `| \x1b[36mPORT:\x1b[0m \x1b[33m${configService.get('PORT')}\x1b[0m`,
+    `\x1b[36mNODE_ENV:\x1b[0m \x1b[33m${appConfig.nodeEnv}\x1b[0m`,
+    `| \x1b[36mPORT:\x1b[0m \x1b[33m${appConfig.port}\x1b[0m`,
   );
 }
 

@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { MailService } from './mail.service';
 import { MailerModule } from '@nestjs-modules/mailer';
-import { ConfigService } from '@nestjs/config';
+import { MailConfig, AppConfig } from '../../core/config';
 import { EjsAdapter } from '@nestjs-modules/mailer/dist/adapters/ejs.adapter';
 import { join } from 'path';
 import { MailListener } from './mail.listener';
@@ -10,22 +10,22 @@ import { MailListener } from './mail.listener';
   providers: [MailService, MailListener],
   imports: [
     MailerModule.forRootAsync({
-      inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
+      inject: [MailConfig, AppConfig],
+      useFactory: (mailConfig: MailConfig, appConfig: AppConfig) => ({
         transport: {
-          host: configService.get<string>('MAILER_HOST'),
-          port: configService.get<number>('MAILER_PORT'),
-          secure: configService.get<string>('NODE_ENV') !== 'development',
+          host: mailConfig.host,
+          port: mailConfig.port,
+          secure: appConfig.isDevelopment,
           auth: {
-            user: configService.get<string>('MAILER_USER'),
-            pass: configService.get<string>('MAILER_PASS'),
+            user: mailConfig.user,
+            pass: mailConfig.password,
           },
           tls: {
             rejectUnauthorized: false,
           },
         },
         defaults: {
-          from: configService.get<string>('EMAIL_FROM'),
+          from: mailConfig.fromAddress,
         },
         template: {
           dir: join(__dirname, 'templates'),

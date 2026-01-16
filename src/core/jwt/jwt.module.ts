@@ -1,17 +1,17 @@
 import { Module } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { TokenConfig } from '../../core/config';
 import { JwtModule } from '@nestjs/jwt';
 
 @Module({
   imports: [
     JwtModule.registerAsync({
-      inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
+      inject: [TokenConfig],
+      useFactory: (tokenConfig: TokenConfig) => ({
         global: true,
         signOptions: {
-          expiresIn: config.get<number>('ACCESS_TOKEN_TTL'),
+          expiresIn: tokenConfig.accessTtl,
         },
-        secret: config.get<string>('ACCESS_TOKEN_SECRET'),
+        secret: tokenConfig.accessSecret,
       }),
     }),
   ],

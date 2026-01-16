@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ConfigModule, AppConfig } from '../config';
 import { LoggerModule as PinoLoggerModule } from 'nestjs-pino';
 import { Request, Response } from 'express';
 
@@ -7,11 +7,8 @@ import { Request, Response } from 'express';
   imports: [
     PinoLoggerModule.forRootAsync({
       imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: (config: ConfigService) => {
-        const isDev =
-          config.get('NODE_ENV') !== 'production' && !config.get('VERCEL');
-
+      inject: [AppConfig],
+      useFactory: (appConfig: AppConfig) => {
         return {
           pinoHttp: {
             level: 'debug',
@@ -33,7 +30,7 @@ import { Request, Response } from 'express';
               }),
             },
 
-            transport: isDev
+            transport: appConfig.isDevelopment
               ? {
                   targets: [
                     {
