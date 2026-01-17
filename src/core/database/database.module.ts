@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { ConfigModule, ConfigService } from '@nestjs/config';
+import { DatabaseConfig, AppConfig } from '../../core/config';
 
 /**
  * Module for database configuration and connection.
@@ -10,14 +10,13 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 @Module({
   imports: [
     TypeOrmModule.forRootAsync({
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
+      inject: [DatabaseConfig, AppConfig],
+      useFactory: (databaseConfig: DatabaseConfig, appConfig: AppConfig) => ({
         type: 'postgres',
-        url: configService.get('DATABASE_URL'),
-
+        url: databaseConfig.url,
+        entities: [__dirname + '/../**/*.entity{.ts,.js}'],
         autoLoadEntities: true, // no need for adding entities explicitly
-        synchronize: configService.get('NODE_ENV') === 'development', // IMPORTANT: only use 'true' for development!
+        synchronize: appConfig.isDevelopment, // IMPORTANT: only use 'true' for development!
         ssl: {
           rejectUnauthorized: false, // Required for Neon
         },

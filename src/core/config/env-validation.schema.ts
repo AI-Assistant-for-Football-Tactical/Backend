@@ -1,4 +1,5 @@
 import * as Joi from 'joi';
+import { AppEnv } from '../../common/constants/app.constants';
 
 /**
  * Joi validation schema for environment variables.
@@ -9,17 +10,17 @@ import * as Joi from 'joi';
 export const envValidationSchema = Joi.object({
   // --- App Config ---
   NODE_ENV: Joi.string()
-    .valid('development', 'production', 'test')
-    .default('development'),
+    .valid(AppEnv.DEVELOPMENT, AppEnv.PRODUCTION, AppEnv.TESTING)
+    .default(AppEnv.DEVELOPMENT),
   PORT: Joi.number().default(5050),
   BASE_URL: Joi.string().default('http://localhost:5050'),
   API: Joi.string().default('api/v1'),
 
   // --- Security & Auth ---
   ACCESS_TOKEN_SECRET: Joi.string().required(),
-  ACCESS_TOKEN_TTL: Joi.number().required().default(900), // 15 min
+  ACCESS_TOKEN_TTL: Joi.string().required().default('15m'), // 15 min
   REFRESH_TOKEN_SECRET: Joi.string().required(),
-  REFRESH_TOKEN_TTL: Joi.number().required().default(604800), // 7 days
+  REFRESH_TOKEN_TTL: Joi.string().required().default('7d'), // 7 days
   CORS_ORIGIN: Joi.string().required(),
 
   // --- DataBase - PostgreSQL ---
@@ -33,8 +34,11 @@ export const envValidationSchema = Joi.object({
   MAILER_FROM_ADDRESS: Joi.string().email().required(),
 
   // --- Tokens life time ---
-  EMAIL_VERIFY_TOKEN_TTL: Joi.number().required().default(900),
+  EMAIL_VERIFY_TOKEN_TTL: Joi.string().required().default('15m'),
 
   // --- Reset Password Token ---
-  PASSWORD_RESET_TOKEN_TTL: Joi.number().required().default(900),
+  PASSWORD_RESET_TOKEN_TTL: Joi.string().required().default('15m'),
+
+  // --- Invitation Token ---
+  INVITATION_TOKEN_TTL: Joi.string().required().default('15m'),
 });

@@ -1,7 +1,7 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { ConfigService } from '@nestjs/config';
+import { TokenConfig } from '../../core/config';
 import { JwtService } from '@nestjs/jwt';
 import { PinoLogger } from 'nestjs-pino';
 import * as crypto from 'crypto';
@@ -20,7 +20,7 @@ export class TokenService {
   constructor(
     @InjectRepository(Token)
     private readonly tokenRepo: Repository<Token>,
-    private readonly config: ConfigService,
+    private readonly tokenConfig: TokenConfig,
     private readonly logger: PinoLogger,
     private readonly jwtService: JwtService,
   ) {}
@@ -36,13 +36,9 @@ export class TokenService {
 
     // Handle expiration calculation if not provided
     if (!tokenDto.expires_at) {
-      // Expects TTL in SECONDS from .env (e.g., REFRESH_TOKEN_TTL=604800)
-      const tokenExpiresInSeconds = this.config.get<number>(
-        `${tokenDto.type}_TOKEN_TTL`,
-        0,
-      );
+      const tokenTtl: number = this.tokenConfig.tokenTtl(tokenDto.type); // in milliseconds
 
-      tokenDto.expires_at = new Date(Date.now() + tokenExpiresInSeconds * 1000);
+      tokenDto.expires_at = new Date(Date.now() + tokenTtl);
     }
 
     /**
@@ -58,7 +54,6 @@ export class TokenService {
 
     try {
       const tokenInstance = this.tokenRepo.create(tokenData);
-      console.log(tokenInstance);
       return await this.tokenRepo.save(tokenInstance);
     } catch (err) {
       this.logger.error('Failed to persist token record', err);
@@ -96,8 +91,8 @@ export class TokenService {
     try {
       return this.jwtService.sign(payload, {
         // expiresIn expects seconds if passed as a number
-        expiresIn: this.config.get<number>('ACCESS_TOKEN_TTL', 3600),
-        secret: this.config.get<string>('ACCESS_TOKEN_SECRET'),
+        expiresIn: this.tokenConfig.accessTtl,
+        secret: this.tokenConfig.accessSecret,
       });
     } catch (err) {
       this.logger.error('Error creating access token', err);

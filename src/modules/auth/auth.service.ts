@@ -1,6 +1,6 @@
 import * as bcrypt from 'bcrypt';
 import { MoreThan, Repository } from 'typeorm';
-import { ConfigService } from '@nestjs/config';
+import { AppConfig } from '../../core/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import {
@@ -31,7 +31,7 @@ export class AuthService {
    * @param {Repository<User>} userRepo - The TypeORM repository for User entities.
    * @param {Repository<Token>} tokenRepo - The TypeORM repository for Token entities.
    * @param {EventEmitter2} eventEmitter - The event emitter for firing events.
-   * @param {ConfigService} configService - The config service for accessing environment variables.
+   * @param {AppConfig} appConfig - The config service for accessing environment variables.
    * @param {PinoLogger} logger - The logger for logging events.
    * @param {TokenService} tokenService - The service for creating and managing tokens.
    * @param {UserService} userService - The service for managing user entities.
@@ -42,7 +42,7 @@ export class AuthService {
     @InjectRepository(Token)
     private tokenRepo: Repository<Token>,
     private readonly eventEmitter: EventEmitter2,
-    private readonly configService: ConfigService,
+    private readonly appConfig: AppConfig,
     private readonly logger: PinoLogger,
     private readonly tokenService: TokenService,
     private readonly userService: UserService,
@@ -476,8 +476,8 @@ export class AuthService {
    * @returns `url`: The full URL (to be sent in an email).
    */
   private embedTokenIntoUrl(route: string, token: string): string {
-    const baseUrl: string = this.configService.get<string>('BASE_URL', '');
-    const api: string = this.configService.get<string>('API', '');
+    const baseUrl: string = this.appConfig.baseUrl;
+    const api: string = this.appConfig.apiPrefix;
 
     // BUG should be the frontend url
     // e.g: http://localhost:3000/api/v1/auth/verify-email?token=...

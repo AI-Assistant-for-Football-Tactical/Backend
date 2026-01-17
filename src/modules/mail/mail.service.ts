@@ -1,12 +1,12 @@
 import { MailerService } from '@nestjs-modules/mailer';
 import { Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { MailConfig } from '../../core/config';
 
 @Injectable()
 export class MailService {
   constructor(
     private readonly mailerService: MailerService,
-    private readonly configService: ConfigService,
+    private readonly mailConfig: MailConfig,
   ) {}
 
   /**
@@ -24,7 +24,7 @@ export class MailService {
   ): Promise<boolean> {
     await this.mailerService.sendMail({
       to: email,
-      from: this.configService.get<string>('MAILER_FROM_ADDRESS'),
+      from: this.mailConfig.fromAddress,
       subject: `Verify Your Email`,
       template: './verify-email.template.ejs',
       context: {
@@ -51,7 +51,7 @@ export class MailService {
   ): Promise<boolean> {
     await this.mailerService.sendMail({
       to: email,
-      from: this.configService.get<string>('MAILER_FROM_ADDRESS'),
+      from: this.mailConfig.fromAddress,
       subject: `Reset Your Password`,
       template: './reset-password.template.ejs',
       context: {
@@ -78,7 +78,7 @@ export class MailService {
   ): Promise<boolean> {
     await this.mailerService.sendMail({
       to: email,
-      from: this.configService.get<string>('MAILER_FROM_ADDRESS'),
+      from: this.mailConfig.fromAddress,
       subject: `Change Your Password`,
       template: './change-password.template.ejs',
       context: {
