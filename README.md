@@ -1,4 +1,4 @@
-# AI Assistant for Football Tactical Backend
+# AI Assistant for Football Tactical Backend 
 
 This repository contains the backend server for the **AI Assistant for Football Tactical** graduation project. This is a **NestJS** application that functions as an AI-powered insights tool for football clubs.
 
