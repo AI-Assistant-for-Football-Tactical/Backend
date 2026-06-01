@@ -10,7 +10,7 @@ import { SystemRole } from '../../../common/enums/system-role.enum';
 import { IS_PUBLIC_ENDPOINT_KEY } from '../../../common/decorators/public-endpoint.decorator';
 import { ALLOWED_MEMBER_ROLES_KEY } from '../../../common/decorators/roles.decorator';
 import { AccessTokenPayload } from '../constants/token-payload.type';
-import { MemberRole } from '../../../common/enums/member-role.enum';
+import { TeamRole } from '../../../common/enums/team-role.enum';
 import { PinoLogger } from 'nestjs-pino';
 import type { RequestWithUser } from '../../../common/interfaces/Request.interface';
 
@@ -52,7 +52,7 @@ export class RolesGuard implements CanActivate {
     );
 
     // Check Member Roles
-    hasPermission &&= this.checkRole<MemberRole>(
+    hasPermission &&= this.checkRole<TeamRole>(
       context,
       ALLOWED_MEMBER_ROLES_KEY,
       user.mem_role,

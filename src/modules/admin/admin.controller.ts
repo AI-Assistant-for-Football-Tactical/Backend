@@ -22,7 +22,7 @@ import {
   UserSearchResultDto,
 } from '../user/dto/user-search.dto';
 import { ClaimSearchQueryDto } from './dtos/claim-search-query.dto';
-import { SysRoles } from '../../common/decorators/roles.decorator';
+import { RequireSystemRole } from '../../common/decorators/roles.decorator';
 import { SystemRole } from '../../common/enums/system-role.enum';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { AccessTokenPayload } from '../auth/constants/token-payload.type';
@@ -34,7 +34,7 @@ import type { AccessTokenPayload } from '../auth/constants/token-payload.type';
 @ApiTags('Admin')
 @ApiBearerAuth()
 @Controller('admin')
-@SysRoles(SystemRole.ADMIN, SystemRole.SUPER_ADMIN)
+@RequireSystemRole(SystemRole.ADMIN, SystemRole.SUPER_ADMIN)
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}
 

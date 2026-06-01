@@ -18,7 +18,7 @@ import { StorageConfirmReqDto } from '../../../src/modules/storage/dto/storage-c
 import { User } from '../../../src/modules/user/entities/user.entity';
 import { Club } from '../../../src/modules/club/entities/club.entity';
 import { Claim } from '../../../src/modules/club-claim/entities/claim.entity';
-import { MemberRole } from 'src/common/enums/member-role.enum';
+import { TeamRole } from 'src/common/enums/team-role.enum';
 
 interface MockRepository {
   internalRepo: {
@@ -112,7 +112,7 @@ describe('StorageService', () => {
       status: 'ACTIVE',
       sys_role: SystemRole.USER,
       club_id: 'club-uuid-123',
-      mem_role: MemberRole.NONE,
+      mem_role: TeamRole.NONE,
     };
 
     it('should generate signature and dynamic upload URL successfully (Happy Path)', async () => {
@@ -153,7 +153,7 @@ describe('StorageService', () => {
         status: 'ACTIVE',
         sys_role: SystemRole.ADMIN,
         club_id: null,
-        mem_role: MemberRole.NONE,
+        mem_role: TeamRole.NONE,
       };
 
       const query: StorageSignatureReqDto = {
@@ -174,7 +174,7 @@ describe('StorageService', () => {
       status: 'ACTIVE',
       sys_role: SystemRole.USER,
       club_id: 'club-uuid-123',
-      mem_role: MemberRole.NONE,
+      mem_role: TeamRole.NONE,
     };
 
     it('should sync user avatar and save storage file log successfully using Strategy Pattern', async () => {

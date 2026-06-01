@@ -10,7 +10,7 @@ import { UserRepository } from '../user/repositories/user.repository';
 import { Club } from './entities/club.entity';
 import { User } from '../user/entities/user.entity';
 import { ClubStatus } from './constants/club-status.enum';
-import { MemberRole } from '../../common/enums/member-role.enum';
+import { TeamRole } from '../../common/enums/team-role.enum';
 import { UpdateClubStatusDto } from './dto/update-club-status.dto';
 import { ClubSearchQueryDto } from './dto/club-search-query.dto';
 import {
@@ -57,16 +57,16 @@ export class ClubService {
       throw new NotFoundException('User not found.');
     }
 
-    if (dbUser.member_role === MemberRole.STAFF) {
+    if (dbUser.member_role === TeamRole.STAFF) {
       // STAFF unlinks immediately
       dbUser.club_id = null;
-      dbUser.member_role = MemberRole.NONE;
+      dbUser.member_role = TeamRole.NONE;
       dbUser.last_security_action_at = new Date();
       await this.userRepository.internalRepo.save(dbUser);
       return;
     }
 
-    if (dbUser.member_role === MemberRole.OWNER) {
+    if (dbUser.member_role === TeamRole.OWNER) {
       // Count other members in the club
       const hasOtherMembers = await this.userRepository.hasOtherActiveMembers(
         user.club_id,
@@ -96,7 +96,7 @@ export class ClubService {
         }
 
         dbUser.club_id = null;
-        dbUser.member_role = MemberRole.NONE;
+        dbUser.member_role = TeamRole.NONE;
         dbUser.last_security_action_at = new Date();
         await queryRunner.manager.save(User, dbUser);
 
@@ -123,7 +123,7 @@ export class ClubService {
 
     const currentOwner = await this.userRepository.findActiveById(user.id);
 
-    if (!currentOwner || currentOwner.member_role !== MemberRole.OWNER) {
+    if (!currentOwner || currentOwner.member_role !== TeamRole.OWNER) {
       throw new ForbiddenException(
         'Only the club OWNER can initiate succession.',
       );
@@ -141,7 +141,7 @@ export class ClubService {
       );
     }
 
-    if (targetUser.member_role !== MemberRole.STAFF) {
+    if (targetUser.member_role !== TeamRole.STAFF) {
       throw new BadRequestException('Target user is not a STAFF member.');
     }
 
@@ -164,12 +164,12 @@ export class ClubService {
       await queryRunner.manager.save(Club, club);
 
       // Current OWNER becomes STAFF
-      currentOwner.member_role = MemberRole.STAFF;
+      currentOwner.member_role = TeamRole.STAFF;
       currentOwner.last_security_action_at = new Date();
       await queryRunner.manager.save(User, currentOwner);
 
       // Target STAFF becomes OWNER
-      targetUser.member_role = MemberRole.OWNER;
+      targetUser.member_role = TeamRole.OWNER;
       targetUser.last_security_action_at = new Date();
       await queryRunner.manager.save(User, targetUser);
 

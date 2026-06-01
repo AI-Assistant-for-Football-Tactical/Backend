@@ -18,7 +18,7 @@ import { User } from '../user/entities/user.entity';
 import { Invitation } from '../invitation/entities/invitation.entity';
 import { InvitationStatus } from '../invitation/constants/invitation-status.enum';
 import { ClubStatus } from '../club/constants/club-status.enum';
-import { MemberRole } from '../../common/enums/member-role.enum';
+import { TeamRole } from '../../common/enums/team-role.enum';
 import {
   ClaimStatusResponseDto,
   AdminClaimDetailResponseDto,
@@ -248,7 +248,7 @@ export class ClubClaimService {
 
         // 2. Elevate Claimant to OWNER and assign club
         claimant.club_id = savedClub.id;
-        claimant.member_role = MemberRole.OWNER;
+        claimant.member_role = TeamRole.OWNER;
         await queryRunner.manager.save(User, claimant);
 
         // 3. Mark Claim as APPROVED

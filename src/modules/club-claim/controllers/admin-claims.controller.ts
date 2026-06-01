@@ -19,7 +19,7 @@ import {
   ApiBadRequestResponse,
   ApiConflictResponse,
 } from '@nestjs/swagger';
-import { SysRoles } from '../../../common/decorators/roles.decorator';
+import { RequireSystemRole } from '../../../common/decorators/roles.decorator';
 import { SystemRole } from '../../../common/enums/system-role.enum';
 import { CurrentUser } from '../../../common/decorators/current-user.decorator';
 import { ReviewClaimDto } from '../dto/review-claim.dto';
@@ -38,7 +38,7 @@ import type { AccessTokenPayload } from '../../auth/constants/token-payload.type
 @ApiTags('Admin — Claims')
 @ApiBearerAuth()
 @Controller('admin/claims')
-@SysRoles(SystemRole.ADMIN, SystemRole.SUPER_ADMIN)
+@RequireSystemRole(SystemRole.ADMIN, SystemRole.SUPER_ADMIN)
 export class AdminClaimsController {
   constructor(private readonly clubClaimService: ClubClaimService) {}
 
