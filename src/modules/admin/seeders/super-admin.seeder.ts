@@ -68,4 +68,9 @@ async function bootstrap() {
   }
 }
 
-bootstrap();
+bootstrap()
+  .then(() => process.exit(0))
+  .catch((err) => {
+    console.error('Bootstrapping failed:', err);
+    process.exit(1);
+  });

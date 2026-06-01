@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Patch,
+  Post,
   Body,
   Param,
   Query,
@@ -91,5 +92,26 @@ export class AdminClubController {
     @Body() dto: UpdateClubStatusDto,
   ): Promise<void> {
     return this.clubService.updateClubStatus(id, dto);
+  }
+
+  /**
+   * Force liquidate a club.
+   * Soft-deletes the club and strips all associated members of their club and roles,
+   * revoking their refresh token sessions immediately.
+   *
+   * @param id - UUID of the club to liquidate.
+   * @returns A promise that resolves when the liquidation is complete.
+   * @throws NotFoundException if the club is not found or already deleted.
+   */
+  @Post(':id/liquidate')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({
+    summary:
+      'Force liquidate a club, stripping members and invalidating sessions',
+  })
+  @ApiNoContentResponse({ description: 'Club force liquidated successfully.' })
+  @ApiNotFoundResponse({ description: 'Club not found.' })
+  async liquidateClub(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
+    return this.clubService.liquidateClub(id);
   }
 }

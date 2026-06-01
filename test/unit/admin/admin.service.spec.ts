@@ -1,5 +1,6 @@
 /* eslint-disable */
 import { Test, TestingModule } from '@nestjs/testing';
+import { DataSource } from 'typeorm';
 import { AdminService } from '../../../src/modules/admin/admin.service';
 import { UserRepository } from '../../../src/modules/user/repositories/user.repository';
 import { ClaimRepository } from '../../../src/modules/club-claim/repositories/claim.repository';
@@ -33,6 +34,7 @@ describe('AdminService', () => {
     userRepository = {
       internalRepo: {
         update: jest.fn(),
+        findOne: jest.fn(),
         createQueryBuilder: jest.fn().mockReturnValue(mockQueryBuilder),
       },
     };
@@ -55,9 +57,13 @@ describe('AdminService', () => {
         { provide: UserRepository, useValue: userRepository },
         { provide: ClaimRepository, useValue: claimRepository },
         { provide: ClubRepository, useValue: clubRepository },
+        { provide: DataSource, useValue: {} },
         {
           provide: UserService,
-          useValue: { searchUsers: jest.fn() },
+          useValue: {
+            searchUsers: jest.fn(),
+            updateUserStatus: jest.fn(),
+          },
         },
         {
           provide: EventEmitter2,
@@ -78,11 +84,29 @@ describe('AdminService', () => {
   describe('promoteUser', () => {
     const targetUserId = 'target-uuid';
 
+    it('should throw NotFoundException if user is not found during promotion', async () => {
+      const requester = {
+        id: 'super-admin-uuid',
+        sys_role: SystemRole.SUPER_ADMIN,
+      } as AccessTokenPayload;
+      userRepository.internalRepo.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.promoteUser(requester, targetUserId, {
+          role: SystemRole.REVIEWER,
+        }),
+      ).rejects.toThrow(NotFoundException);
+    });
+
     it('should throw ForbiddenException if an ADMIN tries to promote someone to ADMIN', async () => {
       const requester = {
         id: 'admin-uuid',
         sys_role: SystemRole.ADMIN,
       } as AccessTokenPayload;
+      userRepository.internalRepo.findOne.mockResolvedValue({
+        id: targetUserId,
+        system_role: SystemRole.REVIEWER,
+      });
 
       await expect(
         service.promoteUser(requester, targetUserId, {
@@ -101,6 +125,10 @@ describe('AdminService', () => {
         id: 'admin-uuid',
         sys_role: SystemRole.ADMIN,
       } as AccessTokenPayload;
+      userRepository.internalRepo.findOne.mockResolvedValue({
+        id: targetUserId,
+        system_role: SystemRole.REVIEWER,
+      });
 
       await expect(
         service.promoteUser(requester, targetUserId, {
@@ -114,18 +142,62 @@ describe('AdminService', () => {
       );
     });
 
-    it('should throw NotFoundException if user is not found during promotion', async () => {
+    it('should throw ForbiddenException if user tries to modify a higher system role user', async () => {
       const requester = {
-        id: 'super-admin-uuid',
-        sys_role: SystemRole.SUPER_ADMIN,
+        id: 'admin-uuid',
+        sys_role: SystemRole.ADMIN,
       } as AccessTokenPayload;
-      userRepository.internalRepo.update.mockResolvedValue({ affected: 0 });
+      userRepository.internalRepo.findOne.mockResolvedValue({
+        id: targetUserId,
+        system_role: SystemRole.SUPER_ADMIN,
+      });
 
       await expect(
         service.promoteUser(requester, targetUserId, {
           role: SystemRole.REVIEWER,
         }),
-      ).rejects.toThrow(NotFoundException);
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('should allow self-downgrade', async () => {
+      const requester = {
+        id: 'super-admin-uuid',
+        sys_role: SystemRole.SUPER_ADMIN,
+      } as AccessTokenPayload;
+      userRepository.internalRepo.findOne.mockResolvedValue({
+        id: 'super-admin-uuid',
+        system_role: SystemRole.SUPER_ADMIN,
+      });
+      userRepository.internalRepo.update.mockResolvedValue({ affected: 1 });
+
+      await service.promoteUser(requester, 'super-admin-uuid', {
+        role: SystemRole.ADMIN,
+      });
+
+      expect(userRepository.internalRepo.update).toHaveBeenCalledWith(
+        'super-admin-uuid',
+        {
+          system_role: SystemRole.ADMIN,
+          last_security_action_at: expect.any(Date),
+        },
+      );
+    });
+
+    it('should forbid self-upgrade', async () => {
+      const requester = {
+        id: 'admin-uuid',
+        sys_role: SystemRole.ADMIN,
+      } as AccessTokenPayload;
+      userRepository.internalRepo.findOne.mockResolvedValue({
+        id: 'admin-uuid',
+        system_role: SystemRole.ADMIN,
+      });
+
+      await expect(
+        service.promoteUser(requester, 'admin-uuid', {
+          role: SystemRole.SUPER_ADMIN,
+        }),
+      ).rejects.toThrow(ForbiddenException);
     });
 
     it('should promote user successfully and emit event', async () => {
@@ -133,6 +205,10 @@ describe('AdminService', () => {
         id: 'super-admin-uuid',
         sys_role: SystemRole.SUPER_ADMIN,
       } as AccessTokenPayload;
+      userRepository.internalRepo.findOne.mockResolvedValue({
+        id: targetUserId,
+        system_role: SystemRole.REVIEWER,
+      });
       userRepository.internalRepo.update.mockResolvedValue({ affected: 1 });
 
       await service.promoteUser(requester, targetUserId, {
@@ -154,39 +230,6 @@ describe('AdminService', () => {
     });
   });
 
-  describe('updateUserStatus', () => {
-    const targetUserId = 'target-uuid';
-
-    it('should throw NotFoundException if user is not found during status update', async () => {
-      userRepository.internalRepo.update.mockResolvedValue({ affected: 0 });
-
-      await expect(
-        service.updateUserStatus(targetUserId, {
-          status: AccountStatus.SOFT_DELETED,
-        }),
-      ).rejects.toThrow(NotFoundException);
-    });
-
-    it('should update user status successfully and emit event', async () => {
-      userRepository.internalRepo.update.mockResolvedValue({ affected: 1 });
-
-      await service.updateUserStatus(targetUserId, {
-        status: AccountStatus.SOFT_DELETED,
-      });
-
-      expect(userRepository.internalRepo.update).toHaveBeenCalledWith(
-        targetUserId,
-        {
-          status: AccountStatus.SOFT_DELETED,
-          last_security_action_at: expect.any(Date),
-        },
-      );
-      expect(eventEmitter.emit).toHaveBeenCalledWith('admin.status-updated', {
-        targetUserId,
-        newStatus: AccountStatus.SOFT_DELETED,
-      });
-    });
-  });
 
   describe('searchUsers', () => {
     it('should return paginated users', async () => {

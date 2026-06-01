@@ -447,6 +447,63 @@ export class ClubService {
     }
   }
 
+  /**
+   * Force liquidates a club.
+   * Soft-deletes the club and strips all associated members of their club and roles,
+   * revoking their refresh token sessions immediately.
+   *
+   * @param clubId - UUID of the club to liquidate.
+   * @returns A promise that resolves when the liquidation is complete.
+   * @throws NotFoundException if the club is not found or already deleted.
+   */
+  async liquidateClub(clubId: string): Promise<void> {
+    const club = await this.clubRepository.findNotDeletedById(clubId);
+
+    if (!club) {
+      throw new NotFoundException('Club not found.');
+    }
+
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      club.status = ClubStatus.SOFT_DELETED;
+      await queryRunner.manager.save(Club, club);
+      await queryRunner.manager.softRemove(Club, club);
+
+      const members = await queryRunner.manager.find(User, {
+        where: { club_id: clubId },
+        select: { id: true },
+      });
+      const memberIds = members.map((member) => member.id);
+
+      if (memberIds.length > 0) {
+        await queryRunner.manager.update(
+          User,
+          { id: In(memberIds) },
+          {
+            club_id: null,
+            member_role: TeamRole.NONE,
+            last_security_action_at: new Date(),
+          },
+        );
+
+        await queryRunner.manager.delete(AuthToken, {
+          user_id: In(memberIds),
+          type: AuthTokenType.REFRESH,
+        });
+      }
+
+      await queryRunner.commitTransaction();
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
   private async listClubMembersByClubId(
     clubId: string,
     query: ClubMemberSearchQueryDto,
