@@ -8,6 +8,7 @@ import {
   HttpCode,
   HttpStatus,
   ParseUUIDPipe,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -33,6 +34,7 @@ import {
 import { RequireTeamRole } from '../../common/decorators/roles.decorator';
 import { TeamRole } from '../../common/enums/team-role.enum';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { ActiveClubGuard } from '../../common/guards/active-club.guard';
 import type { AccessTokenPayload } from '../auth/constants/token-payload.type';
 
 /**
@@ -60,6 +62,7 @@ export class InvitationController {
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @RequireTeamRole(TeamRole.OWNER)
+  @UseGuards(ActiveClubGuard)
   @ApiOperation({ summary: 'Invite a user to join the club (Manager only)' })
   @ApiCreatedResponse({
     description: 'Invitation created successfully.',
@@ -87,6 +90,7 @@ export class InvitationController {
   @Get()
   @HttpCode(HttpStatus.OK)
   @RequireTeamRole(TeamRole.OWNER)
+  @UseGuards(ActiveClubGuard)
   @ApiOperation({
     summary: "Search invites sent by the manager's club (Manager only)",
   })
@@ -133,6 +137,7 @@ export class InvitationController {
   @Post(':id/cancel')
   @HttpCode(HttpStatus.NO_CONTENT)
   @RequireTeamRole(TeamRole.OWNER)
+  @UseGuards(ActiveClubGuard)
   @ApiOperation({
     summary:
       "Cancel a pending invitation sent by the manager's club (Manager only)",

@@ -4,6 +4,7 @@ import { ClubController } from '../../../src/modules/club/controllers/club.contr
 import { ClubService } from '../../../src/modules/club/club.service';
 import { ClubResponseDto } from '../../../src/modules/club/dto/club-governance.dto';
 import { ClubStatus } from '../../../src/modules/club/constants/club-status.enum';
+import { ActiveClubGuard } from '../../../src/common/guards/active-club.guard';
 
 describe('ClubController', () => {
   let controller: ClubController;
@@ -12,14 +13,21 @@ describe('ClubController', () => {
   beforeEach(async () => {
     const mockClubService = {
       getMyClub: jest.fn(),
+      listMyClubMembers: jest.fn(),
+      getMyClubMember: jest.fn(),
       leaveClub: jest.fn(),
       succession: jest.fn(),
+      removeMember: jest.fn(),
+      removeMembers: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [ClubController],
       providers: [{ provide: ClubService, useValue: mockClubService }],
-    }).compile();
+    })
+      .overrideGuard(ActiveClubGuard)
+      .useValue({ canActivate: jest.fn() })
+      .compile();
 
     controller = module.get<ClubController>(ClubController);
     service = module.get(ClubService);
@@ -62,6 +70,54 @@ describe('ClubController', () => {
     });
   });
 
+  describe('listMyClubMembers', () => {
+    it('should call service listMyClubMembers on success', async () => {
+      const user = { id: 'user-uuid', club_id: 'club-uuid' } as any;
+      const query = { page: 1, limit: 10 };
+      const expectedResponse = {
+        members: [
+          {
+            id: 'member-uuid',
+            username: 'member',
+            first_name: 'Member',
+            last_name: null,
+            profile_image_url: null,
+            member_role: 'STAFF',
+          },
+        ],
+        total: 1,
+        page: 1,
+        limit: 10,
+      } as any;
+      service.listMyClubMembers.mockResolvedValue(expectedResponse);
+
+      const result = await controller.listMyClubMembers(user, query);
+
+      expect(result).toEqual(expectedResponse);
+      expect(service.listMyClubMembers).toHaveBeenCalledWith(user, query);
+    });
+  });
+
+  describe('getMyClubMember', () => {
+    it('should call service getMyClubMember on success', async () => {
+      const user = { id: 'owner-uuid', club_id: 'club-uuid' } as any;
+      const expectedResponse = {
+        id: 'member-uuid',
+        username: 'member',
+        first_name: 'Member',
+        last_name: null,
+        profile_image_url: null,
+        member_role: 'STAFF',
+      } as any;
+      service.getMyClubMember.mockResolvedValue(expectedResponse);
+
+      const result = await controller.getMyClubMember(user, 'member-uuid');
+
+      expect(result).toEqual(expectedResponse);
+      expect(service.getMyClubMember).toHaveBeenCalledWith(user, 'member-uuid');
+    });
+  });
+
   describe('succession', () => {
     it('should call service succession on success', async () => {
       const user = { id: 'user-uuid', club_id: 'club-uuid' } as any;
@@ -71,6 +127,29 @@ describe('ClubController', () => {
       await controller.succession(user, dto);
 
       expect(service.succession).toHaveBeenCalledWith(user, 'target-user-uuid');
+    });
+  });
+
+  describe('removeMember', () => {
+    it('should call service removeMember on success', async () => {
+      const user = { id: 'owner-uuid', club_id: 'club-uuid' } as any;
+      service.removeMember.mockResolvedValue(undefined);
+
+      await controller.removeMember(user, 'member-uuid');
+
+      expect(service.removeMember).toHaveBeenCalledWith(user, 'member-uuid');
+    });
+  });
+
+  describe('removeMembers', () => {
+    it('should call service removeMembers on success', async () => {
+      const user = { id: 'owner-uuid', club_id: 'club-uuid' } as any;
+      const dto = { memberIds: ['member-uuid', 'member-2-uuid'] };
+      service.removeMembers.mockResolvedValue(undefined);
+
+      await controller.removeMembers(user, dto);
+
+      expect(service.removeMembers).toHaveBeenCalledWith(user, dto.memberIds);
     });
   });
 });

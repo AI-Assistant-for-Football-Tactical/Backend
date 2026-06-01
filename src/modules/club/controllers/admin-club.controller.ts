@@ -21,7 +21,11 @@ import { RequireSystemRole } from '../../../common/decorators/roles.decorator';
 import { SystemRole } from '../../../common/enums/system-role.enum';
 import { UpdateClubStatusDto } from '../dto/update-club-status.dto';
 import { ClubSearchQueryDto } from '../dto/club-search-query.dto';
-import { PaginatedClubsResponseDto } from '../dto/club-governance.dto';
+import {
+  PaginatedClubMembersResponseDto,
+  PaginatedClubsResponseDto,
+} from '../dto/club-governance.dto';
+import { ClubMemberSearchQueryDto } from '../dto/club-member-search-query.dto';
 import { ClubService } from '../club.service';
 
 /**
@@ -49,6 +53,24 @@ export class AdminClubController {
     @Query() query: ClubSearchQueryDto,
   ): Promise<PaginatedClubsResponseDto> {
     return this.clubService.listClubs(query);
+  }
+
+  /**
+   * List active members of a club.
+   *
+   * @param id - UUID of the club
+   * @returns Active club members
+   */
+  @Get(':id/members')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'List active members of a club' })
+  @ApiOkResponse({ type: PaginatedClubMembersResponseDto })
+  @ApiNotFoundResponse({ description: 'Club not found.' })
+  async listClubMembers(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query() query: ClubMemberSearchQueryDto,
+  ): Promise<PaginatedClubMembersResponseDto> {
+    return this.clubService.listClubMembersForAdmin(id, query);
   }
 
   /**

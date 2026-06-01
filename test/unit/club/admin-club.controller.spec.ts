@@ -11,6 +11,7 @@ describe('AdminClubController', () => {
   beforeEach(async () => {
     const mockClubService = {
       listClubs: jest.fn(),
+      listClubMembersForAdmin: jest.fn(),
       updateClubStatus: jest.fn(),
     };
 
@@ -54,6 +55,34 @@ describe('AdminClubController', () => {
       await controller.updateClubStatus(id, dto);
 
       expect(service.updateClubStatus).toHaveBeenCalledWith(id, dto);
+    });
+  });
+
+  describe('listClubMembers', () => {
+    it('should call listClubMembersForAdmin on service', async () => {
+      const id = 'club-uuid';
+      const query = { page: 1, limit: 10 };
+      const expectedResponse = {
+        members: [
+          {
+            id: 'member-uuid',
+            username: 'member',
+            first_name: 'Member',
+            last_name: null,
+            profile_image_url: null,
+            member_role: 'STAFF',
+          },
+        ],
+        total: 1,
+        page: 1,
+        limit: 10,
+      } as any;
+      service.listClubMembersForAdmin.mockResolvedValue(expectedResponse);
+
+      const result = await controller.listClubMembers(id, query);
+
+      expect(result).toEqual(expectedResponse);
+      expect(service.listClubMembersForAdmin).toHaveBeenCalledWith(id, query);
     });
   });
 });
