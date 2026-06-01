@@ -1,5 +1,6 @@
 /* eslint-disable */
 import { Test, TestingModule } from '@nestjs/testing';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { UserService } from '../../../src/modules/user/user.service';
 import { UserRepository } from '../../../src/modules/user/repositories/user.repository';
 import { FavoriteRepository } from '../../../src/modules/user/repositories/favorite.repository';
@@ -25,6 +26,7 @@ describe('UserService', () => {
   let favoriteRepository: any;
   let dataSource: any;
   let logger: any;
+  let eventEmitter: jest.Mocked<EventEmitter2>;
   let mockQueryRunner: any;
 
   beforeEach(async () => {
@@ -47,6 +49,7 @@ describe('UserService', () => {
       internalRepo: {
         findOne: jest.fn(),
         save: jest.fn(),
+        update: jest.fn(),
         createQueryBuilder: jest.fn().mockReturnValue(mockQueryBuilder),
       },
     };
@@ -87,10 +90,12 @@ describe('UserService', () => {
         { provide: FavoriteRepository, useValue: favoriteRepository },
         { provide: DataSource, useValue: dataSource },
         { provide: PinoLogger, useValue: logger },
+        { provide: EventEmitter2, useValue: { emit: jest.fn() } },
       ],
     }).compile();
 
     service = module.get<UserService>(UserService);
+    eventEmitter = module.get(EventEmitter2);
   });
 
   it('should be defined', () => {
@@ -314,6 +319,58 @@ describe('UserService', () => {
 
       expect(result.id).toBe(userId);
       expect(result.email).toBe('admin@example.com');
+    });
+  });
+
+  describe('updateUserStatus', () => {
+    const targetUserId = 'target-uuid';
+    const mockRequester = { sys_role: SystemRole.ADMIN } as any;
+
+    it('should throw NotFoundException if user is not found during status update', async () => {
+      userRepository.internalRepo.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.updateUserStatusByAdmin(mockRequester, targetUserId, {
+          status: AccountStatus.BANNED,
+        }),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should throw ForbiddenException if requester role is lower than target role', async () => {
+      userRepository.internalRepo.findOne.mockResolvedValue({
+        id: targetUserId,
+        system_role: SystemRole.SUPER_ADMIN,
+      });
+
+      await expect(
+        service.updateUserStatusByAdmin(mockRequester, targetUserId, {
+          status: AccountStatus.BANNED,
+        }),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('should update user status successfully and emit event', async () => {
+      userRepository.internalRepo.findOne.mockResolvedValue({
+        id: targetUserId,
+        system_role: SystemRole.REVIEWER,
+      });
+      userRepository.internalRepo.update.mockResolvedValue({ affected: 1 });
+
+      await service.updateUserStatusByAdmin(mockRequester, targetUserId, {
+        status: AccountStatus.BANNED,
+      });
+
+      expect(userRepository.internalRepo.update).toHaveBeenCalledWith(
+        targetUserId,
+        {
+          status: AccountStatus.BANNED,
+          last_security_action_at: expect.any(Date),
+        },
+      );
+      expect(eventEmitter.emit).toHaveBeenCalledWith('admin.status-updated', {
+        targetUserId,
+        newStatus: AccountStatus.BANNED,
+      });
     });
   });
 });

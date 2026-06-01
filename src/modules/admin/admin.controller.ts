@@ -1,27 +1,22 @@
 import {
   Controller,
-  Get,
   Patch,
+  Post,
   Body,
   Param,
-  Query,
   ParseUUIDPipe,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
   ApiResponse,
-  ApiOkResponse,
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { AdminService } from './admin.service';
 import { PromoteUserDto } from './dtos/promote-user.dto';
-import { UpdateUserStatusDto } from './dtos/update-user-status.dto';
-import {
-  UserSearchQueryDto,
-  UserSearchResultDto,
-} from '../user/dto/user-search.dto';
-import { ClaimSearchQueryDto } from './dtos/claim-search-query.dto';
+import { RevokeTokensByAdminDto } from './dtos/revoke-tokens.dto';
 import { RequireSystemRole } from '../../common/decorators/roles.decorator';
 import { SystemRole } from '../../common/enums/system-role.enum';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -31,7 +26,7 @@ import type { AccessTokenPayload } from '../auth/constants/token-payload.type';
  * Administrative controller for system-wide management and oversight.
  * Access is restricted to users with ADMIN or SUPER_ADMIN system roles.
  */
-@ApiTags('Admin')
+@ApiTags('Admin - system')
 @ApiBearerAuth()
 @Controller('admin')
 @RequireSystemRole(SystemRole.ADMIN, SystemRole.SUPER_ADMIN)
@@ -61,70 +56,21 @@ export class AdminController {
   }
 
   /**
-   * Updates a user's account status (e.g., Ban or Activate).
+   * Revokes all active refresh tokens in the system, optionally time-bounded.
    *
-   * @param id - UUID of the target user.
-   * @param dto - The new status for the user.
+   * @param dto - Time slot boundaries.
+   * @returns A promise that resolves when tokens are revoked.
    */
-  @Patch('users/:id/status')
+  @Post('tokens/revoke')
+  @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Update user account status (Ban/Activate/Deactivate)',
+    summary: 'Revoke active refresh tokens, optionally time-bounded',
   })
   @ApiResponse({
     status: 200,
-    description: 'User status updated successfully.',
+    description: 'Tokens revoked successfully.',
   })
-  @ApiResponse({ status: 404, description: 'User not found.' })
-  async updateUserStatus(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: UpdateUserStatusDto,
-  ): Promise<void> {
-    return this.adminService.updateUserStatus(id, dto);
-  }
-
-  /**
-   * Searches for users with filters and pagination.
-   *
-   * @param query - Search parameters.
-   */
-  @Get('users')
-  @ApiOperation({ summary: 'Search and filter users' })
-  @ApiOkResponse({
-    description: 'List of users returned successfully.',
-    type: UserSearchResultDto,
-  })
-  async searchUsers(@Query() query: UserSearchQueryDto) {
-    return this.adminService.searchUsers(query);
-  }
-
-  /**
-   * Searches for club ownership claims.
-   *
-   * @param query - Search parameters.
-   */
-  @Get('claims')
-  @ApiOperation({ summary: 'Search and filter club ownership claims' })
-  @ApiOkResponse({
-    description: 'List of claims returned successfully.',
-    // type: ClaimSearchResultDto, // Note: Need to create this if it doesn't exist or use a generic one
-  })
-  async searchClaims(@Query() query: ClaimSearchQueryDto) {
-    return this.adminService.searchClaims(query);
-  }
-
-  /**
-   * Searches for clubs (Teams).
-   *
-   * @param page - Page number.
-   * @param limit - Limit per page.
-   * @param name - Optional name filter.
-   */
-  @Get('clubs')
-  @ApiOperation({ summary: 'Search and filter clubs' })
-  @ApiOkResponse({
-    description: 'List of clubs returned successfully.',
-  })
-  async searchClubs(@Body() dto: ClaimSearchQueryDto) {
-    return this.adminService.searchClubs(dto);
+  async revokeTokens(@Body() dto: RevokeTokensByAdminDto): Promise<void> {
+    return this.adminService.revokeRefreshTokens(dto);
   }
 }
