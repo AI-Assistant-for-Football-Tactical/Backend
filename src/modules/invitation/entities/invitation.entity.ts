@@ -1,7 +1,7 @@
 import { Entity, Column, ManyToOne, JoinColumn, Index } from 'typeorm';
 import { Club } from '../../club/entities/club.entity';
 import { InvitationStatus } from '../constants/invitation-status.enum';
-import { MemberRole } from '../../../common/enums/member-role.enum';
+import { TeamRole } from '../../../common/enums/team-role.enum';
 import { User } from '../../user/entities/user.entity';
 import { BaseEntity } from '../../../common/entities/base.entity';
 
@@ -41,10 +41,10 @@ export class Invitation extends BaseEntity {
   /** The role the invitee will receive upon acceptance */
   @Column({
     type: 'enum',
-    enum: MemberRole,
-    default: MemberRole.STAFF,
+    enum: TeamRole,
+    default: TeamRole.STAFF,
   })
-  role: MemberRole;
+  role: TeamRole;
 
   @Column({ type: 'timestamptz' })
   expires_at: Date;
