@@ -13,6 +13,7 @@ describe('AdminClubController', () => {
       listClubs: jest.fn(),
       listClubMembersForAdmin: jest.fn(),
       updateClubStatus: jest.fn(),
+      liquidateClub: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -83,6 +84,17 @@ describe('AdminClubController', () => {
 
       expect(result).toEqual(expectedResponse);
       expect(service.listClubMembersForAdmin).toHaveBeenCalledWith(id, query);
+    });
+  });
+
+  describe('liquidateClub', () => {
+    it('should call liquidateClub on service', async () => {
+      const id = 'club-uuid';
+      service.liquidateClub.mockResolvedValue(undefined);
+
+      await controller.liquidateClub(id);
+
+      expect(service.liquidateClub).toHaveBeenCalledWith(id);
     });
   });
 });

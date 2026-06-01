@@ -3,16 +3,22 @@ import {
   ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
-import { SystemRole } from '../../common/enums/system-role.enum';
+import { DataSource } from 'typeorm';
+import {
+  SystemRole,
+  isRoleHigherThan,
+} from '../../common/enums/system-role.enum';
 import { PromoteUserDto } from './dtos/promote-user.dto';
-import { UpdateUserStatusDto } from './dtos/update-user-status.dto';
 import { ClaimSearchQueryDto } from './dtos/claim-search-query.dto';
+import { RevokeTokensByAdminDto } from './dtos/revoke-tokens.dto';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { UserRepository } from '../user/repositories/user.repository';
 import { ClaimRepository } from '../club-claim/repositories/claim.repository';
 import { ClubRepository } from '../club/repositories/club.repository';
 import { Claim } from '../club-claim/entities/claim.entity';
 import { Club } from '../club/entities/club.entity';
+import { AuthToken } from '../auth/entities/token.entity';
+import { AuthTokenType } from '../auth/constants/auth-token-type.enum';
 import type { AccessTokenPayload } from '../auth/constants/token-payload.type';
 import { SecurityEvents } from '../../common/events/security.events';
 import { UserService } from '../user/user.service';
@@ -31,6 +37,7 @@ export class AdminService {
     private readonly clubRepository: ClubRepository,
     private readonly userService: UserService,
     private readonly eventEmitter: EventEmitter2,
+    private readonly dataSource: DataSource,
   ) {}
 
   /**
@@ -39,7 +46,8 @@ export class AdminService {
    * @param requester - The authenticated user performing the promotion.
    * @param targetUserId - The UUID of the user to be promoted.
    * @param dto - Data containing the new role.
-   * @throws ForbiddenException if the promotion violates the role hierarchy.
+   * @returns A promise that resolves when promotion is complete.
+   * @throws ForbiddenException if the promotion violates the role hierarchy or is a self-upgrade.
    * @throws NotFoundException if the target user does not exist.
    */
   async promoteUser(
@@ -47,67 +55,62 @@ export class AdminService {
     targetUserId: string,
     dto: PromoteUserDto,
   ): Promise<void> {
-    // 1. Hierarchy Validation
-    if (requester.sys_role === SystemRole.ADMIN) {
-      if (
-        dto.role === SystemRole.ADMIN ||
-        dto.role === SystemRole.SUPER_ADMIN
-      ) {
-        // Emit security violation event to notify SUPER_ADMINs
-        this.eventEmitter.emit(SecurityEvents.ADMIN_SECURITY_VIOLATION, {
-          requesterId: requester.id,
-          targetUserId,
-          attemptedRole: dto.role,
-          action: 'ROLE_PROMOTION_OVERREACH',
-        });
+    const targetUser = await this.userRepository.internalRepo.findOne({
+      where: { id: targetUserId },
+      select: { id: true, system_role: true },
+    });
 
+    if (!targetUser) {
+      throw new NotFoundException(`User with ID ${targetUserId} not found.`);
+    }
+
+    // 1. Hierarchy Validation
+    if (requester.id === targetUserId) {
+      // Self-promotion checks: can downgrade, but not upgrade
+      if (isRoleHigherThan(dto.role, targetUser.system_role)) {
         throw new ForbiddenException(
-          'Admins can only promote users to REVIEWER role. Promotion to ADMIN or SUPER_ADMIN is restricted to Super Admins.',
+          'You cannot upgrade your own system role.',
         );
+      }
+    } else {
+      // Modifying another user
+      if (isRoleHigherThan(targetUser.system_role, requester.sys_role)) {
+        throw new ForbiddenException(
+          'You cannot modify a user with a higher system role.',
+        );
+      }
+
+      if (requester.sys_role === SystemRole.ADMIN) {
+        if (
+          dto.role === SystemRole.ADMIN ||
+          dto.role === SystemRole.SUPER_ADMIN
+        ) {
+          // Emit security violation event to notify SUPER_ADMINs
+          this.eventEmitter.emit(SecurityEvents.ADMIN_SECURITY_VIOLATION, {
+            requesterId: requester.id,
+            targetUserId,
+            attemptedRole: dto.role,
+            action: 'ROLE_PROMOTION_OVERREACH',
+          });
+
+          throw new ForbiddenException(
+            'Admins can only promote users to REVIEWER role. Promotion to ADMIN or SUPER_ADMIN is restricted to Super Admins.',
+          );
+        }
       }
     }
 
     // 2. Perform raw update to bypass class-validator hooks on the entity
-    const result = await this.userRepository.internalRepo.update(targetUserId, {
+    await this.userRepository.internalRepo.update(targetUserId, {
       system_role: dto.role,
       last_security_action_at: updateSecurityActionTime(),
     });
-
-    if (result.affected === 0) {
-      throw new NotFoundException(`User with ID ${targetUserId} not found.`);
-    }
 
     // 3. Emit success event for audit logging/notifications
     this.eventEmitter.emit(SecurityEvents.ADMIN_USER_PROMOTED, {
       targetUserId,
       newRole: dto.role,
       adminId: requester.id,
-    });
-  }
-
-  /**
-   * Updates a user's account status (e.g., BANNED, ACTIVE).
-   *
-   * @param targetUserId - The UUID of the user to update.
-   * @param dto - Data containing the new status.
-   * @throws NotFoundException if the user does not exist.
-   */
-  async updateUserStatus(
-    targetUserId: string,
-    dto: UpdateUserStatusDto,
-  ): Promise<void> {
-    const result = await this.userRepository.internalRepo.update(targetUserId, {
-      status: dto.status,
-      last_security_action_at: updateSecurityActionTime(),
-    });
-
-    if (result.affected === 0) {
-      throw new NotFoundException(`User with ID ${targetUserId} not found.`);
-    }
-
-    this.eventEmitter.emit(SecurityEvents.ADMIN_USER_STATUS_UPDATED, {
-      targetUserId,
-      newStatus: dto.status,
     });
   }
 
@@ -189,5 +192,34 @@ export class AdminService {
 
   async searchUsers(query: UserSearchQueryDto) {
     return this.userService.searchUsers(query);
+  }
+
+  /**
+   * Revokes all active refresh tokens in a given time slot.
+   * If no boundaries are provided, all active refresh tokens in the system are deleted.
+   *
+   * @param dto - Optional time slot boundaries.
+   * @returns A promise that resolves when the revocation is complete.
+   */
+  async revokeRefreshTokens(dto: RevokeTokensByAdminDto): Promise<void> {
+    const queryBuilder = this.dataSource
+      .getRepository(AuthToken)
+      .createQueryBuilder('token')
+      .delete()
+      .where('type = :type', { type: AuthTokenType.REFRESH });
+
+    if (dto.startDate) {
+      queryBuilder.andWhere('created_at >= :startDate', {
+        startDate: new Date(dto.startDate),
+      });
+    }
+
+    if (dto.endDate) {
+      queryBuilder.andWhere('created_at <= :endDate', {
+        endDate: new Date(dto.endDate),
+      });
+    }
+
+    await queryBuilder.execute();
   }
 }
