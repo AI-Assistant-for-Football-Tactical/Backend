@@ -4,7 +4,7 @@ import { ClubService } from '../../../src/modules/club/club.service';
 import { ClubRepository } from '../../../src/modules/club/repositories/club.repository';
 import { UserRepository } from '../../../src/modules/user/repositories/user.repository';
 import { DataSource } from 'typeorm';
-import { MemberRole } from '../../../src/common/enums/member-role.enum';
+import { TeamRole } from '../../../src/common/enums/team-role.enum';
 import { ClubStatus } from '../../../src/modules/club/constants/club-status.enum';
 import {
   NotFoundException,
@@ -78,9 +78,9 @@ describe('ClubService', () => {
 
   describe('getMyClub', () => {
     it('should throw NotFoundException if user has no club_id in payload', async () => {
-      await expect(
-        service.getMyClub({ club_id: null } as any),
-      ).rejects.toThrow(NotFoundException);
+      await expect(service.getMyClub({ club_id: null } as any)).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should throw NotFoundException if club is not found in database', async () => {
@@ -132,14 +132,14 @@ describe('ClubService', () => {
       const mockUser = {
         id: 'user-uuid',
         club_id: 'club-uuid',
-        member_role: MemberRole.STAFF,
+        member_role: TeamRole.STAFF,
       };
       userRepository.findActiveById.mockResolvedValue(mockUser);
 
       await service.leaveClub(userPayload);
 
       expect(mockUser.club_id).toBeNull();
-      expect(mockUser.member_role).toBe(MemberRole.NONE);
+      expect(mockUser.member_role).toBe(TeamRole.NONE);
       expect(userRepository.internalRepo.save).toHaveBeenCalledWith(mockUser);
     });
 
@@ -147,7 +147,7 @@ describe('ClubService', () => {
       const mockUser = {
         id: 'user-uuid',
         club_id: 'club-uuid',
-        member_role: MemberRole.OWNER,
+        member_role: TeamRole.OWNER,
       };
       userRepository.findActiveById.mockResolvedValue(mockUser);
       userRepository.hasOtherActiveMembers.mockResolvedValue(true);
@@ -161,7 +161,7 @@ describe('ClubService', () => {
       const mockUser = {
         id: 'user-uuid',
         club_id: 'club-uuid',
-        member_role: MemberRole.OWNER,
+        member_role: TeamRole.OWNER,
       };
       const mockClub = {
         id: 'club-uuid',
@@ -182,7 +182,7 @@ describe('ClubService', () => {
         mockClub,
       );
       expect(mockUser.club_id).toBeNull();
-      expect(mockUser.member_role).toBe(MemberRole.NONE);
+      expect(mockUser.member_role).toBe(TeamRole.NONE);
       expect(mockQueryRunner.manager.save).toHaveBeenCalledWith(User, mockUser);
       expect(mockQueryRunner.commitTransaction).toHaveBeenCalled();
       expect(mockQueryRunner.release).toHaveBeenCalled();
@@ -192,7 +192,7 @@ describe('ClubService', () => {
       const mockUser = {
         id: 'user-uuid',
         club_id: 'club-uuid',
-        member_role: MemberRole.OWNER,
+        member_role: TeamRole.OWNER,
       };
       userRepository.findActiveById.mockResolvedValue(mockUser);
       userRepository.hasOtherActiveMembers.mockResolvedValue(false);
@@ -209,14 +209,17 @@ describe('ClubService', () => {
 
     it('should throw NotFoundException if user is not in a club', async () => {
       await expect(
-        service.succession({ id: 'owner-uuid', club_id: null } as any, 'target-uuid'),
+        service.succession(
+          { id: 'owner-uuid', club_id: null } as any,
+          'target-uuid',
+        ),
       ).rejects.toThrow(NotFoundException);
     });
 
     it('should throw ForbiddenException if current user is not found or is not OWNER', async () => {
       userRepository.findActiveById.mockResolvedValue({
         id: 'owner-uuid',
-        member_role: MemberRole.STAFF,
+        member_role: TeamRole.STAFF,
       });
 
       await expect(
@@ -226,7 +229,10 @@ describe('ClubService', () => {
 
     it('should throw NotFoundException if target user is not found', async () => {
       userRepository.findActiveById
-        .mockResolvedValueOnce({ id: 'owner-uuid', member_role: MemberRole.OWNER })
+        .mockResolvedValueOnce({
+          id: 'owner-uuid',
+          member_role: TeamRole.OWNER,
+        })
         .mockResolvedValueOnce(null);
 
       await expect(
@@ -236,8 +242,15 @@ describe('ClubService', () => {
 
     it('should throw BadRequestException if target user belongs to a different club', async () => {
       userRepository.findActiveById
-        .mockResolvedValueOnce({ id: 'owner-uuid', member_role: MemberRole.OWNER, club_id: 'club-uuid' })
-        .mockResolvedValueOnce({ id: 'target-uuid', club_id: 'different-club-uuid' });
+        .mockResolvedValueOnce({
+          id: 'owner-uuid',
+          member_role: TeamRole.OWNER,
+          club_id: 'club-uuid',
+        })
+        .mockResolvedValueOnce({
+          id: 'target-uuid',
+          club_id: 'different-club-uuid',
+        });
 
       await expect(
         service.succession(ownerPayload, 'target-uuid'),
@@ -246,8 +259,16 @@ describe('ClubService', () => {
 
     it('should throw BadRequestException if target user is not a STAFF member', async () => {
       userRepository.findActiveById
-        .mockResolvedValueOnce({ id: 'owner-uuid', member_role: MemberRole.OWNER, club_id: 'club-uuid' })
-        .mockResolvedValueOnce({ id: 'target-uuid', club_id: 'club-uuid', member_role: MemberRole.NONE });
+        .mockResolvedValueOnce({
+          id: 'owner-uuid',
+          member_role: TeamRole.OWNER,
+          club_id: 'club-uuid',
+        })
+        .mockResolvedValueOnce({
+          id: 'target-uuid',
+          club_id: 'club-uuid',
+          member_role: TeamRole.NONE,
+        });
 
       await expect(
         service.succession(ownerPayload, 'target-uuid'),
@@ -255,8 +276,16 @@ describe('ClubService', () => {
     });
 
     it('should transfer ownership atomically on happy path', async () => {
-      const mockOwner = { id: 'owner-uuid', member_role: MemberRole.OWNER, club_id: 'club-uuid' };
-      const mockTarget = { id: 'target-uuid', member_role: MemberRole.STAFF, club_id: 'club-uuid' };
+      const mockOwner = {
+        id: 'owner-uuid',
+        member_role: TeamRole.OWNER,
+        club_id: 'club-uuid',
+      };
+      const mockTarget = {
+        id: 'target-uuid',
+        member_role: TeamRole.STAFF,
+        club_id: 'club-uuid',
+      };
       const mockClub = { id: 'club-uuid', owner_id: 'owner-uuid' };
 
       userRepository.findActiveById
@@ -270,10 +299,16 @@ describe('ClubService', () => {
       expect(mockQueryRunner.startTransaction).toHaveBeenCalled();
       expect(mockClub.owner_id).toBe('target-uuid');
       expect(mockQueryRunner.manager.save).toHaveBeenCalledWith(Club, mockClub);
-      expect(mockOwner.member_role).toBe(MemberRole.STAFF);
-      expect(mockQueryRunner.manager.save).toHaveBeenCalledWith(User, mockOwner);
-      expect(mockTarget.member_role).toBe(MemberRole.OWNER);
-      expect(mockQueryRunner.manager.save).toHaveBeenCalledWith(User, mockTarget);
+      expect(mockOwner.member_role).toBe(TeamRole.STAFF);
+      expect(mockQueryRunner.manager.save).toHaveBeenCalledWith(
+        User,
+        mockOwner,
+      );
+      expect(mockTarget.member_role).toBe(TeamRole.OWNER);
+      expect(mockQueryRunner.manager.save).toHaveBeenCalledWith(
+        User,
+        mockTarget,
+      );
       expect(mockQueryRunner.commitTransaction).toHaveBeenCalled();
       expect(mockQueryRunner.release).toHaveBeenCalled();
     });
@@ -285,7 +320,10 @@ describe('ClubService', () => {
         { id: 'club-1', name: 'Mock Club A' },
         { id: 'club-2', name: 'Mock Club B' },
       ];
-      clubRepository.internalRepo.findAndCount.mockResolvedValue([mockClubs, 2]);
+      clubRepository.internalRepo.findAndCount.mockResolvedValue([
+        mockClubs,
+        2,
+      ]);
 
       const result = await service.listClubs({
         name: 'Mock',
@@ -312,7 +350,9 @@ describe('ClubService', () => {
       const mockClub = { id: 'club-uuid', status: ClubStatus.INACTIVE };
       clubRepository.findNotDeletedById.mockResolvedValue(mockClub);
 
-      await service.updateClubStatus('club-uuid', { status: ClubStatus.ACTIVE });
+      await service.updateClubStatus('club-uuid', {
+        status: ClubStatus.ACTIVE,
+      });
 
       expect(mockClub.status).toBe(ClubStatus.ACTIVE);
       expect(clubRepository.internalRepo.save).toHaveBeenCalledWith(mockClub);
@@ -322,7 +362,9 @@ describe('ClubService', () => {
       const mockClub = { id: 'club-uuid', status: ClubStatus.ACTIVE };
       clubRepository.findNotDeletedById.mockResolvedValue(mockClub);
 
-      await service.updateClubStatus('club-uuid', { status: ClubStatus.SUSBENDED });
+      await service.updateClubStatus('club-uuid', {
+        status: ClubStatus.SUSBENDED,
+      });
 
       expect(mockClub.status).toBe(ClubStatus.SUSBENDED);
       expect(userRepository.internalRepo.update).toHaveBeenCalledWith(

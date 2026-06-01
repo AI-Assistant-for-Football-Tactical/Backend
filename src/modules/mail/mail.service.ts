@@ -89,4 +89,31 @@ export class MailService {
 
     return true;
   }
+
+  /**
+   * Send club invitation email to an invited user.
+   *
+   * @param email email to send the invitation to
+   * @param clubName name of the club that sent the invitation
+   * @param actionUrl url used by the user to respond to the invitation
+   * @returns {Promise<boolean>} True if success, False otherwise
+   */
+  async sendInvitationEmail(
+    email: string,
+    clubName: string,
+    actionUrl: string,
+  ): Promise<boolean> {
+    await this.mailerService.sendMail({
+      to: email,
+      from: this.mailConfig.fromAddress,
+      subject: `You're invited to join ${clubName}`,
+      template: './club-invitation.template.ejs',
+      context: {
+        clubName,
+        invitationUrl: actionUrl,
+      },
+    });
+
+    return true;
+  }
 }

@@ -17,7 +17,7 @@ import {
   ApiNoContentResponse,
   ApiNotFoundResponse,
 } from '@nestjs/swagger';
-import { SysRoles } from '../../../common/decorators/roles.decorator';
+import { RequireSystemRole } from '../../../common/decorators/roles.decorator';
 import { SystemRole } from '../../../common/enums/system-role.enum';
 import { UpdateClubStatusDto } from '../dto/update-club-status.dto';
 import { ClubSearchQueryDto } from '../dto/club-search-query.dto';
@@ -31,7 +31,7 @@ import { ClubService } from '../club.service';
 @ApiTags('Admin — Clubs')
 @ApiBearerAuth()
 @Controller('admin/clubs')
-@SysRoles(SystemRole.ADMIN, SystemRole.SUPER_ADMIN)
+@RequireSystemRole(SystemRole.ADMIN, SystemRole.SUPER_ADMIN)
 export class AdminClubController {
   constructor(private readonly clubService: ClubService) {}
 

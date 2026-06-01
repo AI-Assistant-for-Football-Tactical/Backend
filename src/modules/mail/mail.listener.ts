@@ -4,6 +4,10 @@ import { MailService } from './mail.service';
 import { AuthEventsPayload } from '../auth/constants/auth-events-payload';
 import { PinoLogger } from 'nestjs-pino';
 import { SecurityEvents } from '../../common/events/security.events';
+import {
+  InvitationEvents,
+  UserInvitedEvent,
+} from '../../common/events/invitation.events';
 
 @Injectable()
 export class MailListener {
@@ -55,6 +59,39 @@ export class MailListener {
       this.logger.info(`Successfully sent email to: ${payload.email}`);
     } catch (err) {
       this.logger.error(err, `Failed to send  email to: ${payload.email}`);
+    }
+  }
+
+  /**
+   * Handle Event When A User Is Invited To Join A Club
+   *
+   * @param payload UserInvitedEvent (email, actionUrl, clubName, clubId)
+   */
+  @OnEvent(InvitationEvents.USER_INVITED, { async: true })
+  async sendClubInvitationEventHandle(payload: UserInvitedEvent) {
+    const { email, actionUrl, clubName, clubId } = payload;
+    try {
+      this.logger.info(
+        `Attempting to send club invitation email to: ${email} for club: ${clubId}`,
+      );
+      const success = await this.mailService.sendInvitationEmail(
+        email,
+        clubName,
+        actionUrl,
+      );
+
+      if (!success) {
+        throw new Error('Failed to send club invitation email');
+      }
+
+      this.logger.info(
+        `Successfully sent club invitation email to: ${email} for club: ${clubId}`,
+      );
+    } catch (err) {
+      this.logger.error(
+        err,
+        `Failed to send club invitation email to: ${email} for club: ${clubId}`,
+      );
     }
   }
 }

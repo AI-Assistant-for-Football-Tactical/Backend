@@ -1,12 +1,19 @@
 import { SetMetadata } from '@nestjs/common';
-import { MemberRole } from '../enums/member-role.enum';
+import { TeamRole } from '../enums/team-role.enum';
 import { SystemRole } from '../enums/system-role.enum';
 
 export const ALLOWED_SYSTEM_ROLES_KEY = 'allowed_system_roles';
 export const ALLOWED_MEMBER_ROLES_KEY = 'allowed_member_roles';
 
-export const SysRoles = (...roles: SystemRole[]) =>
-  SetMetadata(ALLOWED_SYSTEM_ROLES_KEY, roles);
-
-export const MemberRoles = (...roles: MemberRole[]) =>
+/**
+ * Decorator to require specific team roles for accessing a resource.
+ * Accepts TeamRole values.
+ */
+export const RequireTeamRole = (...roles: TeamRole[]) =>
   SetMetadata(ALLOWED_MEMBER_ROLES_KEY, roles);
+
+/**
+ * Decorator to require specific system roles for accessing a resource.
+ */
+export const RequireSystemRole = (...roles: SystemRole[]) =>
+  SetMetadata(ALLOWED_SYSTEM_ROLES_KEY, roles);

@@ -70,18 +70,6 @@ export class AuthTokenConfig {
   }
 
   /**
-   * Returns the TTL for an invitation token.
-   *
-   * @returns The TTL for an invitation token in milliseconds.
-   */
-  get invitationTtl(): number {
-    const ttl: StringValue = this.configService.get<StringValue>(
-      'INVITATION_TOKEN_TTL',
-    )!;
-    return ms(ttl);
-  }
-
-  /**
    * Returns the TTL for a given token type.
    *
    * @param type - The token type.

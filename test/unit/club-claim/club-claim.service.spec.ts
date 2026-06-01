@@ -7,7 +7,7 @@ import { DataSource } from 'typeorm';
 import { ClaimStatus } from '../../../src/common/enums/claim-status.enum';
 import { ClaimReviewAction } from '../../../src/modules/club-claim/enums/claim-review-action.enum';
 import { ClubStatus } from '../../../src/modules/club/constants/club-status.enum';
-import { MemberRole } from '../../../src/common/enums/member-role.enum';
+import { TeamRole } from '../../../src/common/enums/team-role.enum';
 import { InvitationStatus } from '../../../src/modules/invitation/constants/invitation-status.enum';
 import {
   NotFoundException,
@@ -328,7 +328,9 @@ describe('ClubClaimService', () => {
         expect(mockClaim.status).toBe(ClaimStatus.REJECTED);
         expect(mockClaim.reviewer_id).toBe('admin-uuid');
         expect(mockClaim.rejection_reason).toBe('Poor documentation.');
-        expect(claimRepository.internalRepo.save).toHaveBeenCalledWith(mockClaim);
+        expect(claimRepository.internalRepo.save).toHaveBeenCalledWith(
+          mockClaim,
+        );
       });
     });
 
@@ -354,7 +356,7 @@ describe('ClubClaimService', () => {
           club_name: 'Mock FC',
           sofa_score_team_id: '1234',
           document_urls: ['doc1.png'],
-          user: { id: 'user-uuid', club_id: null, member_role: MemberRole.NONE },
+          user: { id: 'user-uuid', club_id: null, member_role: TeamRole.NONE },
           reviewer_id: null,
           reviewed_at: null,
         };
@@ -380,17 +382,26 @@ describe('ClubClaimService', () => {
           status: ClubStatus.ACTIVE,
           logo_url: 'doc1.png',
         });
-        expect(mockQueryRunner.manager.save).toHaveBeenCalledWith(Club, mockClub);
+        expect(mockQueryRunner.manager.save).toHaveBeenCalledWith(
+          Club,
+          mockClub,
+        );
 
         // Check user elevation
         expect(mockClaim.user.club_id).toBe('new-club-uuid');
-        expect(mockClaim.user.member_role).toBe(MemberRole.OWNER);
-        expect(mockQueryRunner.manager.save).toHaveBeenCalledWith(User, mockClaim.user);
+        expect(mockClaim.user.member_role).toBe(TeamRole.OWNER);
+        expect(mockQueryRunner.manager.save).toHaveBeenCalledWith(
+          User,
+          mockClaim.user,
+        );
 
         // Check claim approval
         expect(mockClaim.status).toBe(ClaimStatus.APPROVED);
         expect(mockClaim.reviewer_id).toBe('admin-uuid');
-        expect(mockQueryRunner.manager.save).toHaveBeenCalledWith(Claim, mockClaim);
+        expect(mockQueryRunner.manager.save).toHaveBeenCalledWith(
+          Claim,
+          mockClaim,
+        );
 
         // Check invitations revocation
         expect(mockQueryRunner.manager.update).toHaveBeenCalledWith(
@@ -410,7 +421,7 @@ describe('ClubClaimService', () => {
           club_name: 'Mock FC',
           sofa_score_team_id: '1234',
           document_urls: ['doc1.png'],
-          user: { id: 'user-uuid', club_id: null, member_role: MemberRole.NONE },
+          user: { id: 'user-uuid', club_id: null, member_role: TeamRole.NONE },
         };
         claimRepository.findById.mockResolvedValue(mockClaim);
         mockQueryRunner.manager.create.mockImplementation(() => {

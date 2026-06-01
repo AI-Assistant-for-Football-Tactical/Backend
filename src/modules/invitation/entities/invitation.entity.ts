@@ -1,7 +1,7 @@
 import { Entity, Column, ManyToOne, JoinColumn, Index } from 'typeorm';
 import { Club } from '../../club/entities/club.entity';
 import { InvitationStatus } from '../constants/invitation-status.enum';
-import { MemberRole } from '../../../common/enums/member-role.enum';
+import { TeamRole } from '../../../common/enums/team-role.enum';
 import { User } from '../../user/entities/user.entity';
 import { BaseEntity } from '../../../common/entities/base.entity';
 
@@ -11,18 +11,12 @@ import { BaseEntity } from '../../../common/entities/base.entity';
  * The invited_email field is stored for future business designs
  * (e.g., inviting unregistered users via email link).
  *
- * Contains a unique token for email-link acceptance.
- *
  * @relation club      - The club this invitation is for
  * @relation from_user - The user who sent the invitation
  * @relation to_user   - The registered user being invited
  */
 @Entity('invitations')
 export class Invitation extends BaseEntity {
-  @Index()
-  @Column({ type: 'varchar', length: 255, unique: true })
-  token: string;
-
   @Index()
   @Column({
     type: 'enum',
@@ -41,10 +35,10 @@ export class Invitation extends BaseEntity {
   /** The role the invitee will receive upon acceptance */
   @Column({
     type: 'enum',
-    enum: MemberRole,
-    default: MemberRole.STAFF,
+    enum: TeamRole,
+    default: TeamRole.STAFF,
   })
-  role: MemberRole;
+  role: TeamRole;
 
   @Column({ type: 'timestamptz' })
   expires_at: Date;

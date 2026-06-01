@@ -1,0 +1,1567 @@
+{
+  "info": {
+    "_postman_id": "63b7ca74-f747-4397-8d37-0cd90dc18786",
+    "name": "Backend",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "47110543",
+    "_collection_link": "https://go.postman.co/collection/47110543-63b7ca74-f747-4397-8d37-0cd90dc18786?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "SignUp",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const responseBody = pm.response.json();\r",
+                  "pm.environment.set(\"accessToken\", responseBody.data.accessToken);\r",
+                  "pm.environment.set(\"refreshToken\", responseBody.data.refreshToken);\r",
+                  "pm.environment.set(\"email-verification-token\", responseBody.data.token);"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"email\": \"staff.1@alahly.sc\",\r\n    \"username\": \"staff_1_alahly\",\r\n    \"password\": \"{{password}}\",\r\n    \"first_name\": \"Shay\",\r\n    \"last_name\": \"Blabn\"\r\n}\r\n",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{URL}}/{{API}}/auth/sign-up/",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "{{API}}",
+                "auth",
+                "sign-up",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Login User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const responseBody = pm.response.json();\r",
+                  "pm.environment.set(\"accessToken\", responseBody.data.accessToken);\r",
+                  "pm.environment.set(\"refreshToken\", responseBody.data.refreshToken);\r",
+                  "console.log(\"Token extracted and saved:\",  pm.environment);"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"identifier\": \"{{staff_username}}\",\r\n    // \"identifier\": \"{{owner_username}}\",\r\n    \"password\": \"{{password}}\"\r\n}\r\n",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{URL}}/{{API}}/auth/login",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "{{API}}",
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Login Admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const responseBody = pm.response.json();\r",
+                  "pm.environment.set(\"admin-accessToken\", responseBody.data.accessToken);\r",
+                  "pm.environment.set(\"admin-refreshToken\", responseBody.data.refreshToken);"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"identifier\": \"{{admin_username}}\",\r\n    \"password\": \"{{password}}\"\r\n}\r\n",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{URL}}/{{API}}/auth/login",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "{{API}}",
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{URL}}/{{API}}/auth/logout",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "{{API}}",
+                "auth",
+                "logout"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Refresh Tokens User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const responseBody = pm.response.json();\r",
+                  "pm.environment.set(\"accessToken\", responseBody.data.accessToken);\r",
+                  "pm.environment.set(\"refreshToken\", responseBody.data.refreshToken);\r",
+                  "console.log(\"Token extracted and saved:\",  pm.environment);"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"refreshToken\": \"{{refreshToken}}\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{URL}}/{{API}}/auth/refresh",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "{{API}}",
+                "auth",
+                "refresh"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Refresh Tokens Admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const responseBody = pm.response.json();\r",
+                  "pm.environment.set(\"accessToken\", responseBody.data.accessToken);\r",
+                  "pm.environment.set(\"refreshToken\", responseBody.data.refreshToken);\r",
+                  "console.log(\"Token extracted and saved:\",  pm.environment);"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"refreshToken\": \"{{admin-refreshToken}}\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{URL}}/{{API}}/auth/refresh",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "{{API}}",
+                "auth",
+                "refresh"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Resend Email Verification Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.environment.set(\"email-verification-token\", responseBody.data.token);"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{URL}}/{{API}}/auth/email/resend",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "{{API}}",
+                "auth",
+                "email",
+                "resend"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Verify Email By Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const responseBody = pm.response.json();\r",
+                  "pm.environment.set(\"accessToken\", responseBody.data.accessToken);\r",
+                  "pm.environment.set(\"refreshToken\", responseBody.data.refreshToken);\r",
+                  "console.log(\"Token extracted and saved:\",  pm.environment);"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{URL}}/{{API}}/auth/email/verify?token={{email-verification-token}}",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "{{API}}",
+                "auth",
+                "email",
+                "verify"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{email-verification-token}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Forgot Password",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"email\": \"admin.1@shalaboka.ai\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{URL}}/{{API}}/auth/forgot-password",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "{{API}}",
+                "auth",
+                "forgot-password"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Change Password",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"currentPassword\": \"{{password}}\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{URL}}/{{API}}/auth/change-password",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "{{API}}",
+                "auth",
+                "change-password"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Reset Password",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const responseBody = pm.response.json();\r",
+                  "pm.environment.set(\"accessToken\", responseBody.data.accessToken);\r",
+                  "pm.environment.set(\"refreshToken\", responseBody.data.refreshToken);\r",
+                  "console.log(\"Token extracted and saved:\",  pm.environment);"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"newPassword\": \"{{password}}\",\r\n    \"newPasswordConfirm\": \"{{password}}\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{URL}}/{{API}}/auth/reset-password?token=a3dd6dafddd73f37f371ae2b878f3fe604975d38ab07f1900cbf03469f55ed99",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "{{API}}",
+                "auth",
+                "reset-password"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "a3dd6dafddd73f37f371ae2b878f3fe604975d38ab07f1900cbf03469f55ed99"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "item": []
+    },
+    {
+      "name": "User",
+      "item": [
+        {
+          "name": "Admin-User",
+          "item": [
+            {
+              "name": "Get All Users",
+              "protocolProfileBehavior": {
+                "disableBodyPruning": true
+              },
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{admin-accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n    \"email\": \"staff.1@alahly.sc\",\r\n    \"username\": \"staff_1_alahly\",\r\n    \"password\": \"{{password}}\",\r\n    \"first_name\": \"Shay\",\r\n    \"last_name\": \"Blabn\"\r\n}\r\n"
+                },
+                "url": {
+                  "raw": "{{URL}}/{{API}}/admin/users",
+                  "host": [
+                    "{{URL}}"
+                  ],
+                  "path": [
+                    "{{API}}",
+                    "admin",
+                    "users"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Get Me",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{URL}}/{{API}}/users/me",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "{{API}}",
+                "users",
+                "me"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get User By Id",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{URL}}/{{API}}/users/97c9734e-b643-4daf-b54c-c46ac3ac0321",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "{{API}}",
+                "users",
+                "97c9734e-b643-4daf-b54c-c46ac3ac0321"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Users",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{URL}}/{{API}}/users?system_role=ADMIN",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "{{API}}",
+                "users"
+              ],
+              "query": [
+                {
+                  "key": "system_role",
+                  "value": "ADMIN"
+                }
+              ]
+            },
+            "description": "This is a GET request and it is used to \"get\" data from an endpoint. There is no request body for a GET request, but you can use query parameters to help specify the resource you want data on (e.g., in this request, we have `id=1`).\n\nA successful GET response will have a `200 OK` status, and should include some kind of response body - for example, HTML web content or JSON data."
+          },
+          "response": []
+        },
+        {
+          "name": "Update me",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Successful PUT request\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                  "});",
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n\t\"profile_image_url\": \"http://test.com/hi\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{URL}}/{{API}}/users/me",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "{{API}}",
+                "users",
+                "me"
+              ]
+            },
+            "description": "This is a PUT request and it is used to overwrite an existing piece of data. For instance, after you create an entity with a POST request, you may want to modify that later. You can do that using a PUT request. You typically identify the entity being updated by including an identifier in the URL (eg. `id=1`).\n\nA successful PUT request typically returns a `200 OK`, `201 Created`, or `204 No Content` response code."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete me",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Successful DELETE request\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 202, 204]);",
+                  "});",
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{URL}}/{{API}}/users/me",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "{{API}}",
+                "users",
+                "me"
+              ]
+            },
+            "description": "This is a DELETE request, and it is used to delete data that was previously created via a POST request. You typically identify the entity being updated by including an identifier in the URL (eg. `id=1`).\n\nA successful DELETE request typically returns a `200 OK`, `202 Accepted`, or `204 No Content` response code."
+          },
+          "response": []
+        },
+        {
+          "name": "Deactivate Me",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{URL}}/{{API}}/users/me/deactivate",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "{{API}}",
+                "users",
+                "me",
+                "deactivate"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Activate Me",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{URL}}/{{API}}/users/me/activate",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "{{API}}",
+                "users",
+                "me",
+                "activate"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Me and Owned Club",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"limit\": 1,\r\n    \"status\": \"ACTIVE\"\r\n}"
+            },
+            "url": {
+              "raw": "{{URL}}/{{API}}/users/me/with-club",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "{{API}}",
+                "users",
+                "me",
+                "with-club"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Favorite",
+      "item": [
+        {
+          "name": "Get All Favorites",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{URL}}/{{API}}/favorites",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "{{API}}",
+                "favorites"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get a Favorite",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{URL}}/{{API}}/favorites/fa5c4239-9781-4c24-9f25-3df7c64505ec",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "{{API}}",
+                "favorites",
+                "fa5c4239-9781-4c24-9f25-3df7c64505ec"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Favorite",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"target_type\": \"TEAM\",\r\n    \"sofa_score_target_id\": \"12347\",\r\n    \"target_name\": \"Test from bahi\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{URL}}/{{API}}/favorites",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "{{API}}",
+                "favorites"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete a Favorite",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"target_type\": \"TEAM\",\r\n    \"sofa_score_target_id\": \"123456789\",\r\n    \"target_name\": \"Test from bahi\"\r\n}"
+            },
+            "url": {
+              "raw": "{{URL}}/{{API}}/favorites/fa5c4239-9781-4c24-9f25-3df7c64505ec",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "{{API}}",
+                "favorites",
+                "fa5c4239-9781-4c24-9f25-3df7c64505ec"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Many Favorites",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"ids\": [\r\n        \"521a90e0-95b7-4475-a58e-6e18e5e0ddff\",\r\n        \"f256d2c2-8a86-484f-b53f-1f00e508cf5f\"\r\n    ]\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{URL}}/{{API}}/favorites/bulk",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "{{API}}",
+                "favorites",
+                "bulk"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Club",
+      "item": [
+        {
+          "name": "My Club",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"purpose\": \"{{purpose-storage}}\",\r\n    \"entityId\": \"{{entityId-storage}}\",\r\n    \"public_id\": \"{{public-id-upload}}\",\r\n    \"secure_url\": \"{{secure-url-upload}}\",\r\n    \"original_name\": \"{{original-name-upload}}\",\r\n    \"mime_type\": \"{{mime-type-upload}}\",\r\n    \"size_bytes\": {{size-bytes-upload}}\r\n}"
+            },
+            "url": {
+              "raw": "{{URL}}/{{API}}/clubs/mine",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "{{API}}",
+                "clubs",
+                "mine"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Claim",
+      "item": [
+        {
+          "name": "Admin-Claim",
+          "item": [
+            {
+              "name": "Get All Claims",
+              "protocolProfileBehavior": {
+                "disableBodyPruning": true
+              },
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{admin-accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": ""
+                },
+                "url": {
+                  "raw": "{{URL}}/{{API}}/admin/claims",
+                  "host": [
+                    "{{URL}}"
+                  ],
+                  "path": [
+                    "{{API}}",
+                    "admin",
+                    "claims"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Get One Claim",
+              "protocolProfileBehavior": {
+                "disableBodyPruning": true
+              },
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{admin-accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n    \"email\": \"staff.1@alahly.sc\",\r\n    \"username\": \"staff_1_alahly\",\r\n    \"password\": \"{{password}}\",\r\n    \"first_name\": \"Shay\",\r\n    \"last_name\": \"Blabn\"\r\n}\r\n"
+                },
+                "url": {
+                  "raw": "{{URL}}/{{API}}/admin/claims/d6a13ee5-d64a-450a-ace2-a1d29dea49a6",
+                  "host": [
+                    "{{URL}}"
+                  ],
+                  "path": [
+                    "{{API}}",
+                    "admin",
+                    "claims",
+                    "d6a13ee5-d64a-450a-ace2-a1d29dea49a6"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Review a Cliam",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{admin-accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n  \"action\": \"APPROVE\",\r\n  \"feedback\": \"Zagtat Ya 3m Saber.\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{URL}}/{{API}}/admin/claims/eb49e2f7-d614-46e5-8074-07c95623532d/review",
+                  "host": [
+                    "{{URL}}"
+                  ],
+                  "path": [
+                    "{{API}}",
+                    "admin",
+                    "claims",
+                    "eb49e2f7-d614-46e5-8074-07c95623532d",
+                    "review"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Claim a Club",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.environment.set(\"claim-id\", responseBody.data.id);"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"external_club_id\": \"6910\",\r\n  \"document_urls\": [\r\n    \"{{doc-url}}\"\r\n  ],\r\n  \"club_name\": \"Al Ahly SC\",\r\n  \"justification\": \"I am the official marketing manager of Al Ahly.\"\r\n}\r\n",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{URL}}/{{API}}/claims",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "{{API}}",
+                "claims"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get My Recent Claim",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.environment.set(\"claim-id\", responseBody.data.id);"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{URL}}/{{API}}/claims/me",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "{{API}}",
+                "claims",
+                "me"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Cancel My Recent Claim",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.environment.set(\"claim-id\", responseBody.data.id);"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{URL}}/{{API}}/claims/cancel",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "{{API}}",
+                "claims",
+                "cancel"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Invitation",
+      "item": []
+    },
+    {
+      "name": "Storage",
+      "item": [
+        {
+          "name": "Request Signature",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();\r",
+                  "const data = res.data;\r",
+                  "\r",
+                  "if (data) {\r",
+                  "    pm.environment.set(\"signature-storage\", data.signature);\r",
+                  "    pm.environment.set(\"timestamp-storage\", data.timestamp.toString());\r",
+                  "    pm.environment.set(\"public_id-storage\", data.public_id);\r",
+                  "    pm.environment.set(\"folder-storage\", data.folder);\r",
+                  "    pm.environment.set(\"cloud_name-storage\", data.cloud_name);\r",
+                  "    pm.environment.set(\"api_key-storage\", data.api_key);\r",
+                  "    pm.environment.set(\"upload_url-storage\", data.upload_url);\r",
+                  "    pm.environment.set(\"overwrite-storage\", data.overwrite);\r",
+                  "}"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{URL}}/{{API}}/storage/signature?purpose={{purpose-storage}}",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "{{API}}",
+                "storage",
+                "signature"
+              ],
+              "query": [
+                {
+                  "key": "purpose",
+                  "value": "{{purpose-storage}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Confirm Upload",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"purpose\": \"{{purpose-storage}}\",\r\n    // \"entityId\": \"{{entityId-storage}}\",\r\n    \"public_id\": \"{{public-id-upload}}\",\r\n    \"secure_url\": \"{{secure-url-upload}}\",\r\n    \"original_name\": \"{{original-name-upload}}\",\r\n    \"mime_type\": \"{{mime-type-upload}}\",\r\n    \"size_bytes\": {{size-bytes-upload}}\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{URL}}/{{API}}/storage/confirm",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "{{API}}",
+                "storage",
+                "confirm"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Simulate Front Upload",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();\r",
+                  "\r",
+                  "if (res) {\r",
+                  "    pm.environment.set(\"public-id-upload\", res.public_id);\r",
+                  "    pm.environment.set(\"secure-url-upload\", res.secure_url);\r",
+                  "    pm.environment.set(\"original-name-upload\", res.original_filename);\r",
+                  "    pm.environment.set(\"mime-type-upload\", res.resource_type + \"/\" + res.format);\r",
+                  "    pm.environment.set(\"size-bytes-upload\", Number(res.bytes));\r",
+                  "    pm.environment.set(\"doc-url\", res.url);\r",
+                  "}"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "api_key",
+                  "value": "{{api_key-storage}}",
+                  "type": "text",
+                  "uuid": "c689471e-ed65-448d-abd2-75445977c9fd"
+                },
+                {
+                  "key": "timestamp",
+                  "value": "{{timestamp-storage}}",
+                  "type": "text",
+                  "uuid": "62271c4c-139b-4f4a-abb4-f67e4c856129"
+                },
+                {
+                  "key": "signature",
+                  "value": "{{signature-storage}}",
+                  "type": "text",
+                  "uuid": "17fe4527-e698-4063-abc3-b2b53eb3e1f7"
+                },
+                {
+                  "key": "public_id",
+                  "value": "{{public_id-storage}}",
+                  "type": "text",
+                  "uuid": "dcad5fa3-95d9-4a3a-96e9-0b0f987f1146"
+                },
+                {
+                  "key": "folder",
+                  "value": "{{folder-storage}}",
+                  "type": "text",
+                  "uuid": "ab0a340e-75b4-48d9-ab77-f48b85480b1b"
+                },
+                {
+                  "key": "overwrite",
+                  "value": "{{overwrite-storage}}",
+                  "type": "text",
+                  "uuid": "41da9538-4136-48b9-b81d-2b551d1b90bb"
+                },
+                {
+                  "key": "file",
+                  "type": "file",
+                  "uuid": "d504feea-9de7-4466-b300-27f53a8700cd",
+                  "src": "/C:/Users/Bahi/Downloads/650365869_122262784316176140_5618180675379603117_n.jpg"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{upload_url-storage}}",
+              "host": [
+                "{{upload_url-storage}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Dashbord",
+      "item": []
+    }
+  ]
+}
