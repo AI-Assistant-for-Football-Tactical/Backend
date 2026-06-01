@@ -1,16 +1,15 @@
-import {
-  Injectable,
-  InternalServerErrorException,
-  Logger,
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, MoreThan } from 'typeorm';
-import * as crypto from 'crypto';
 import { Invitation } from '../entities/invitation.entity';
 import { BaseRepository } from '../../../common/repositories/base.repository';
 import { InvitationStatus } from '../constants/invitation-status.enum';
 import { TeamRole } from '../../../common/enums/team-role.enum';
-import { InvitationSearchQueryDto } from '../dto/invitation-search-query.dto';
+import {
+  ClubSentInvitationSearchQueryDto,
+  InvitationSearchQueryDto,
+} from '../dto/invitation-search-query.dto';
+import { SortOrder } from '../../../common/dtos/pagination.dto';
 
 /**
  * Custom repository for Invitation entity.
@@ -18,8 +17,6 @@ import { InvitationSearchQueryDto } from '../dto/invitation-search-query.dto';
  */
 @Injectable()
 export class InvitationRepository extends BaseRepository<Invitation> {
-  private readonly logger = new Logger(InvitationRepository.name);
-
   /**
    * Constructs the InvitationRepository.
    *
@@ -62,37 +59,38 @@ export class InvitationRepository extends BaseRepository<Invitation> {
   }
 
   /**
-   * Hashes the raw token using SHA-256 for secure storage.
+   * Searches invitations sent by a specific club with pagination and filters.
    *
-   * @param token The raw token to hash
-   * @returns Hashed token as a hex string
-   * @throws InternalServerErrorException If hashing fails
+   * @param clubId The manager's club ID
+   * @param query Search filters and pagination options
+   * @returns Matching invitations and total count
    */
-  hashToken(token: string): string {
-    try {
-      return crypto.createHash('sha256').update(token).digest('hex');
-    } catch (err) {
-      this.logger.error('Error hashing token', err);
-      throw new InternalServerErrorException('Error hashing token');
-    }
-  }
+  async searchSentInvitesByClub(
+    clubId: string,
+    query: ClubSentInvitationSearchQueryDto,
+  ): Promise<[Invitation[], number]> {
+    const { status, to_email, page = 1, limit = 10 } = query;
+    const skip = (page - 1) * limit;
 
-  /**
-   * Finds all active pending invitations for a specific club.
-   *
-   * @param clubId The club ID
-   * @returns Array of pending invitations
-   */
-  async findActivePendingInvitesByClub(clubId: string): Promise<Invitation[]> {
-    return this.repo.find({
-      where: {
-        club_id: clubId,
-        status: InvitationStatus.PENDING,
-        expires_at: MoreThan(new Date()),
-      },
-      relations: ['to_user'],
-      order: { created_at: 'DESC' },
-    });
+    const queryBuilder = this.createQueryBuilder('invitation')
+      .where('invitation.club_id = :clubId', { clubId })
+      .leftJoinAndSelect('invitation.to_user', 'to_user');
+
+    if (status) {
+      queryBuilder.andWhere('invitation.status = :status', { status });
+    }
+
+    if (to_email) {
+      queryBuilder.andWhere('invitation.to_email LIKE :to_email', {
+        to_email: `%${to_email}%`,
+      });
+    }
+
+    return queryBuilder
+      .orderBy('invitation.created_at', 'DESC')
+      .skip(skip)
+      .take(limit)
+      .getManyAndCount();
   }
 
   /**
@@ -102,7 +100,6 @@ export class InvitationRepository extends BaseRepository<Invitation> {
    * @returns Persisted invitation entity
    */
   async createPendingInvitation(data: {
-    token: string;
     clubId: string;
     fromUserId: string;
     toUserId: string;
@@ -111,7 +108,6 @@ export class InvitationRepository extends BaseRepository<Invitation> {
     role?: TeamRole;
   }): Promise<Invitation> {
     const invitation = this.repo.create({
-      token: data.token,
       status: InvitationStatus.PENDING,
       club_id: data.clubId,
       from_user_id: data.fromUserId,
@@ -193,11 +189,13 @@ export class InvitationRepository extends BaseRepository<Invitation> {
       });
     }
 
+    const orderDirection = query.sortOrder === SortOrder.ASC ? 'ASC' : 'DESC';
+
     return queryBuilder
       .leftJoinAndSelect('invitation.club', 'club')
       .leftJoinAndSelect('invitation.from_user', 'from_user')
       .leftJoinAndSelect('invitation.to_user', 'to_user')
-      .orderBy('invitation.created_at', 'DESC')
+      .orderBy('invitation.created_at', orderDirection)
       .skip(skip)
       .take(limit)
       .getManyAndCount();

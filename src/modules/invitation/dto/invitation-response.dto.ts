@@ -40,7 +40,7 @@ export class UserResponseMiniDto {
 
 /**
  * Response DTO for the invited user when reviewing their pending invitations.
- * Hides internal tokens and includes rich inviter and club details.
+ * Includes rich inviter and club details.
  */
 export class UserPendingInvitationResponseDto {
   @ApiProperty({ example: 'a2b16384-d113-4ec2-a5d6-c2a2b0e9f0e1' })
@@ -159,14 +159,11 @@ export class ClubSentInvitationResponseDto {
 
 /**
  * Full Response DTO for administrative system oversight.
- * Includes all DB columns, raw IDs, and the secure verification token.
+ * Includes invitation status, raw IDs, timestamps, and related users/club.
  */
 export class AdminInvitationResponseDto {
   @ApiProperty({ example: 'a2b16384-d113-4ec2-a5d6-c2a2b0e9f0e1' })
   id: string;
-
-  @ApiProperty({ example: '4a2f8c5b6e4d5c...' })
-  token: string;
 
   @ApiProperty({ enum: InvitationStatus, example: InvitationStatus.PENDING })
   status: InvitationStatus;
@@ -216,7 +213,6 @@ export class AdminInvitationResponseDto {
   static fromEntity(entity: Invitation): AdminInvitationResponseDto {
     const dto = new AdminInvitationResponseDto();
     dto.id = entity.id;
-    dto.token = entity.token;
     dto.status = entity.status;
     dto.status_changed_at = entity.status_changed_at;
     dto.note = entity.note;
@@ -267,4 +263,12 @@ export class AdminInvitationResponseDto {
 export class PaginatedAdminInvitationsResponseDto extends PaginatedResultDto {
   @ApiProperty({ type: [AdminInvitationResponseDto] })
   invitations: AdminInvitationResponseDto[];
+}
+
+/**
+ * Paginated list of invitations sent by a club manager.
+ */
+export class PaginatedClubSentInvitationsResponseDto extends PaginatedResultDto {
+  @ApiProperty({ type: [ClubSentInvitationResponseDto] })
+  invitations: ClubSentInvitationResponseDto[];
 }

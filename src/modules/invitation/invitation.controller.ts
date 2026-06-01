@@ -4,6 +4,7 @@ import {
   Get,
   Body,
   Param,
+  Query,
   HttpCode,
   HttpStatus,
   ParseUUIDPipe,
@@ -23,10 +24,11 @@ import {
 import { InvitationService } from './invitation.service';
 import { CreateInvitationDto } from './dto/create-invitation.dto';
 import { RespondToInvitationDto } from './dto/respond-invitation.dto';
+import { ClubSentInvitationSearchQueryDto } from './dto/invitation-search-query.dto';
 import {
   UserPendingInvitationResponseDto,
-  ClubSentInvitationResponseDto,
   AdminInvitationResponseDto,
+  PaginatedClubSentInvitationsResponseDto,
 } from './dto/invitation-response.dto';
 import { RequireTeamRole } from '../../common/decorators/roles.decorator';
 import { TeamRole } from '../../common/enums/team-role.enum';
@@ -76,27 +78,28 @@ export class InvitationController {
   }
 
   /**
-   * List active pending invites sent by the manager's club.
+   * Search invites sent by the manager's club.
    *
    * @param user The authenticated manager/owner
-   * @returns Array of active pending invites
+   * @param query Search filters and pagination options
+   * @returns Paginated sent invites
    */
   @Get()
   @HttpCode(HttpStatus.OK)
   @RequireTeamRole(TeamRole.OWNER)
   @ApiOperation({
-    summary:
-      "List active pending invites sent by the manager's club (Manager only)",
+    summary: "Search invites sent by the manager's club (Manager only)",
   })
   @ApiOkResponse({
-    description: 'Active pending invitations retrieved successfully.',
-    type: [ClubSentInvitationResponseDto],
+    description: 'Sent invitations retrieved successfully.',
+    type: PaginatedClubSentInvitationsResponseDto,
   })
   @ApiBadRequestResponse({ description: 'Manager does not belong to a club.' })
-  async listActivePendingInvites(
+  async listSentInvites(
     @CurrentUser() user: AccessTokenPayload,
-  ): Promise<ClubSentInvitationResponseDto[]> {
-    return this.invitationService.listActivePendingInvites(user);
+    @Query() query: ClubSentInvitationSearchQueryDto,
+  ): Promise<PaginatedClubSentInvitationsResponseDto> {
+    return this.invitationService.listSentInvitesForManager(user, query);
   }
 
   /**

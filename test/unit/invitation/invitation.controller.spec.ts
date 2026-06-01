@@ -2,14 +2,17 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { InvitationController } from '../../../src/modules/invitation/invitation.controller';
 import { InvitationService } from '../../../src/modules/invitation/invitation.service';
 import { InvitationRespondAction } from '../../../src/modules/invitation/constants/invitation-respond-action.enum';
+import { ClubSentInvitationSearchQueryDto } from '../../../src/modules/invitation/dto/invitation-search-query.dto';
 import type { AccessTokenPayload } from '../../../src/modules/auth/constants/token-payload.type';
 import { TeamRole } from '../../../src/common/enums/team-role.enum';
 import { SystemRole } from '../../../src/common/enums/system-role.enum';
 import {
   AdminInvitationResponseDto,
   ClubSentInvitationResponseDto,
+  PaginatedClubSentInvitationsResponseDto,
   UserPendingInvitationResponseDto,
 } from '../../../src/modules/invitation/dto/invitation-response.dto';
+import { InvitationStatus } from '../../../src/modules/invitation/constants/invitation-status.enum';
 
 // Mock ConfigModule
 jest.mock('@nestjs/config', () => ({
@@ -36,8 +39,8 @@ describe('InvitationController', () => {
   let createInvitation: jest.MockedFunction<
     InvitationService['createInvitation']
   >;
-  let listActivePendingInvites: jest.MockedFunction<
-    InvitationService['listActivePendingInvites']
+  let listSentInvitesForManager: jest.MockedFunction<
+    InvitationService['listSentInvitesForManager']
   >;
   let listMyPendingInvites: jest.MockedFunction<
     InvitationService['listMyPendingInvites']
@@ -61,14 +64,14 @@ describe('InvitationController', () => {
 
   beforeEach(async () => {
     createInvitation = jest.fn();
-    listActivePendingInvites = jest.fn();
+    listSentInvitesForManager = jest.fn();
     listMyPendingInvites = jest.fn();
     cancelInvite = jest.fn();
     respondToInvitation = jest.fn();
 
     const mockInvitationService = {
       createInvitation,
-      listActivePendingInvites,
+      listSentInvitesForManager,
       listMyPendingInvites,
       cancelInvite,
       respondToInvitation,
@@ -103,18 +106,27 @@ describe('InvitationController', () => {
     });
   });
 
-  describe('listActivePendingInvites', () => {
-    it('should delegate to service.listActivePendingInvites', async () => {
+  describe('listSentInvites', () => {
+    it('should delegate to service.listSentInvitesForManager', async () => {
       const user = userPayload({ club_id: 'club-id' });
+      const query: ClubSentInvitationSearchQueryDto = {
+        status: InvitationStatus.PENDING,
+        page: 2,
+        limit: 5,
+      };
       const invite = new ClubSentInvitationResponseDto();
       invite.id = 'invite-id';
-      const expectedResponse = [invite];
-      listActivePendingInvites.mockResolvedValue(expectedResponse);
+      const expectedResponse = new PaginatedClubSentInvitationsResponseDto();
+      expectedResponse.invitations = [invite];
+      expectedResponse.total = 1;
+      expectedResponse.page = 2;
+      expectedResponse.limit = 5;
+      listSentInvitesForManager.mockResolvedValue(expectedResponse);
 
-      const result = await controller.listActivePendingInvites(user);
+      const result = await controller.listSentInvites(user, query);
 
       expect(result).toEqual(expectedResponse);
-      expect(listActivePendingInvites).toHaveBeenCalledWith(user);
+      expect(listSentInvitesForManager).toHaveBeenCalledWith(user, query);
     });
   });
 

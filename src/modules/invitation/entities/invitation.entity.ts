@@ -11,18 +11,12 @@ import { BaseEntity } from '../../../common/entities/base.entity';
  * The invited_email field is stored for future business designs
  * (e.g., inviting unregistered users via email link).
  *
- * Contains a unique token for email-link acceptance.
- *
  * @relation club      - The club this invitation is for
  * @relation from_user - The user who sent the invitation
  * @relation to_user   - The registered user being invited
  */
 @Entity('invitations')
 export class Invitation extends BaseEntity {
-  @Index()
-  @Column({ type: 'varchar', length: 255, unique: true })
-  token: string;
-
   @Index()
   @Column({
     type: 'enum',

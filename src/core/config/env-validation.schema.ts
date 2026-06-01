@@ -39,9 +39,6 @@ export const envValidationSchema = Joi.object({
   // --- Reset Password Token ---
   PASSWORD_RESET_TOKEN_TTL: Joi.string().required().default('15m'),
 
-  // --- Invitation Token ---
-  INVITATION_TOKEN_TTL: Joi.string().required().default('15m'),
-
   // --- Post-Match Analysis ---
   AI_SERVICE_URL: Joi.string().uri().required(),
   GEMINI_API_KEYS: Joi.string().optional(),

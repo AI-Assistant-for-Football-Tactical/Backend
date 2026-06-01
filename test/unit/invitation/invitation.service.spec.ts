@@ -6,7 +6,6 @@ import { ClubRepository } from '../../../src/modules/club/repositories/club.repo
 import { DataSource } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { AppConfig } from '../../../src/core/config';
-import * as crypto from 'crypto';
 import { InvitationStatus } from '../../../src/modules/invitation/constants/invitation-status.enum';
 import { TeamRole } from '../../../src/common/enums/team-role.enum';
 import { InvitationRespondAction } from '../../../src/modules/invitation/constants/invitation-respond-action.enum';
@@ -21,7 +20,10 @@ import { User } from '../../../src/modules/user/entities/user.entity';
 import { InvitationEvents } from '../../../src/common/events/invitation.events';
 import type { AccessTokenPayload } from '../../../src/modules/auth/constants/token-payload.type';
 import { SystemRole } from '../../../src/common/enums/system-role.enum';
-import { InvitationSearchQueryDto } from '../../../src/modules/invitation/dto/invitation-search-query.dto';
+import {
+  ClubSentInvitationSearchQueryDto,
+  InvitationSearchQueryDto,
+} from '../../../src/modules/invitation/dto/invitation-search-query.dto';
 
 type MockInvitationRepository = {
   internalRepo: {
@@ -37,13 +39,14 @@ type MockInvitationRepository = {
   hasActivePendingInvite: jest.MockedFunction<
     (toUserId: string, clubId: string) => Promise<boolean>
   >;
-  hashToken: jest.MockedFunction<(token: string) => string>;
-  findActivePendingInvitesByClub: jest.MockedFunction<
-    (clubId: string) => Promise<Invitation[]>
+  searchSentInvitesByClub: jest.MockedFunction<
+    (
+      clubId: string,
+      query: ClubSentInvitationSearchQueryDto,
+    ) => Promise<[Invitation[], number]>
   >;
   createPendingInvitation: jest.MockedFunction<
     (data: {
-      token: string;
       clubId: string;
       fromUserId: string;
       toUserId: string;
@@ -161,7 +164,6 @@ const userEntity = (overrides: Partial<User> = {}): User =>
 const invitationEntity = (overrides: Partial<Invitation> = {}): Invitation =>
   ({
     id: 'invite-id',
-    token: 'hashed-token',
     club_id: 'club-id',
     from_user_id: 'mgr-id',
     to_user_id: 'usr-id',
@@ -221,12 +223,7 @@ describe('InvitationService', () => {
       },
       createQueryBuilder: jest.fn(),
       hasActivePendingInvite: jest.fn().mockResolvedValue(false),
-      hashToken: jest
-        .fn()
-        .mockImplementation((t: string) =>
-          crypto.createHash('sha256').update(t).digest('hex'),
-        ),
-      findActivePendingInvitesByClub: jest.fn(),
+      searchSentInvitesByClub: jest.fn(),
       createPendingInvitation: jest.fn(),
       findActivePendingInvitesForUser: jest.fn(),
       findForResponseById: jest.fn(),
@@ -359,7 +356,6 @@ describe('InvitationService', () => {
 
       const [createArg] =
         invitationRepository.createPendingInvitation.mock.calls[0];
-      expect(createArg.token).toMatch(/^[a-f0-9]{64}$/);
       expect(createArg).toEqual(
         expect.objectContaining({
           clubId: 'club-id',
@@ -382,7 +378,7 @@ describe('InvitationService', () => {
     });
   });
 
-  describe('listActivePendingInvites', () => {
+  describe('listSentInvitesForManager', () => {
     const managerPayload = accessTokenPayload({
       id: 'mgr-id',
       club_id: 'club-id',
@@ -390,11 +386,20 @@ describe('InvitationService', () => {
 
     it('should throw BadRequestException if manager does not belong to a club', async () => {
       await expect(
-        service.listActivePendingInvites(accessTokenPayload({ id: 'mgr-id' })),
+        service.listSentInvitesForManager(
+          accessTokenPayload({ id: 'mgr-id' }),
+          {},
+        ),
       ).rejects.toThrow(BadRequestException);
     });
 
-    it("should return the club's active pending invitations", async () => {
+    it("should return the club's sent invitations with pagination", async () => {
+      const query: ClubSentInvitationSearchQueryDto = {
+        status: InvitationStatus.PENDING,
+        to_email: 'target@example.com',
+        page: 2,
+        limit: 5,
+      };
       const mockInvites = [
         invitationEntity({
           id: 'invite-1',
@@ -406,17 +411,25 @@ describe('InvitationService', () => {
         }),
       ];
 
-      invitationRepository.findActivePendingInvitesByClub.mockResolvedValue(
+      invitationRepository.searchSentInvitesByClub.mockResolvedValue([
         mockInvites,
+        11,
+      ]);
+
+      const result = await service.listSentInvitesForManager(
+        managerPayload,
+        query,
       );
 
-      const result = await service.listActivePendingInvites(managerPayload);
-
-      expect(
-        invitationRepository.findActivePendingInvitesByClub,
-      ).toHaveBeenCalledWith('club-id');
-      expect(result).toHaveLength(1);
-      expect(result[0].id).toBe('invite-1');
+      expect(invitationRepository.searchSentInvitesByClub).toHaveBeenCalledWith(
+        'club-id',
+        query,
+      );
+      expect(result.invitations).toHaveLength(1);
+      expect(result.invitations[0].id).toBe('invite-1');
+      expect(result.total).toBe(11);
+      expect(result.page).toBe(2);
+      expect(result.limit).toBe(5);
     });
   });
 
@@ -612,6 +625,10 @@ describe('InvitationService', () => {
         action: InvitationRespondAction.REJECT,
       });
 
+      expect(mockQueryRunner.manager.findOne).toHaveBeenCalledWith(Invitation, {
+        where: { id: inviteId },
+        lock: { mode: 'pessimistic_write' },
+      });
       expect(mockInvite.status).toBe(InvitationStatus.REJECTED);
       expect(mockQueryRunner.manager.save).toHaveBeenCalledWith(
         Invitation,

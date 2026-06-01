@@ -66,3 +66,46 @@ export class InvitationSearchQueryDto extends PaginationQueryDto {
   @IsEnum(InvitationSortField)
   sortBy?: InvitationSortField = InvitationSortField.CREATED_AT;
 }
+
+/**
+ * Data Transfer Object for querying invitations sent by the manager's club.
+ */
+export class ClubSentInvitationSearchQueryDto extends PaginationQueryDto {
+  /**
+   * Filter by invitation status.
+   * @example 'PENDING'
+   */
+  @ApiPropertyOptional({
+    description: 'Filter invitations by status',
+    enum: InvitationStatus,
+    example: InvitationStatus.PENDING,
+  })
+  @IsOptional()
+  @IsEnum(InvitationStatus)
+  status?: InvitationStatus;
+
+  /**
+   * Filter by target user email address (exact or partial matches).
+   * @example 'player1@example.com'
+   */
+  @ApiPropertyOptional({
+    description: 'Filter invitations by target email address',
+    example: 'player1@example.com',
+  })
+  @IsOptional()
+  @IsString()
+  to_email?: string;
+
+  /**
+   * Field to sort invitations by.
+   * @example 'created_at'
+   */
+  @ApiPropertyOptional({
+    description: 'Field to sort invitations by',
+    enum: InvitationSortField,
+    default: InvitationSortField.CREATED_AT,
+  })
+  @IsOptional()
+  @IsEnum(InvitationSortField)
+  sortBy?: InvitationSortField = InvitationSortField.CREATED_AT;
+}

@@ -7,7 +7,6 @@ import {
 } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import * as crypto from 'crypto';
 
 import { Invitation } from './entities/invitation.entity';
 import { User } from '../user/entities/user.entity';
@@ -19,12 +18,16 @@ import { TeamRole } from '../../common/enums/team-role.enum';
 import { InvitationRespondAction } from './constants/invitation-respond-action.enum';
 import { CreateInvitationDto } from './dto/create-invitation.dto';
 import { RespondToInvitationDto } from './dto/respond-invitation.dto';
-import { InvitationSearchQueryDto } from './dto/invitation-search-query.dto';
+import {
+  ClubSentInvitationSearchQueryDto,
+  InvitationSearchQueryDto,
+} from './dto/invitation-search-query.dto';
 import {
   UserPendingInvitationResponseDto,
   ClubSentInvitationResponseDto,
   AdminInvitationResponseDto,
   PaginatedAdminInvitationsResponseDto,
+  PaginatedClubSentInvitationsResponseDto,
 } from './dto/invitation-response.dto';
 import {
   InvitationEvents,
@@ -110,14 +113,12 @@ export class InvitationService {
     const club = await this.clubRepository.findNotDeletedById(manager.club_id);
     const clubName = club?.name || 'our club';
 
-    // 4. Generate token and expiration date (7 days from now)
-    const { rawToken, expiresAt } = this.generateInvitationToken();
-    const hashedToken = this.invitationRepository.hashToken(rawToken);
+    // 4. Generate expiration date (7 days from now)
+    const expiresAt = this.generateInvitationExpiry();
 
     // 5. Create PENDING invite
     const savedInvitation =
       await this.invitationRepository.createPendingInvitation({
-        token: hashedToken,
         clubId: manager.club_id,
         fromUserId: manager.id,
         toUserId: targetUser.id,
@@ -127,40 +128,47 @@ export class InvitationService {
       });
 
     // 6. Generate direct action URL and emit UserInvitedEvent using helper method
-    this.emitInvitationEvent(
-      savedInvitation,
-      targetUser.email,
-      clubName,
-      rawToken,
-    );
+    this.emitInvitationEvent(savedInvitation, targetUser.email, clubName);
 
     return AdminInvitationResponseDto.fromEntity(savedInvitation);
   }
 
   /**
-   * Lists active pending invites sent by the manager's club.
+   * Searches invites sent by the manager's club.
    *
    * @param manager The authenticated user requesting the list
-   * @returns Array of active pending invitations for the club manager
+   * @param query Search filters and pagination options
+   * @returns Paginated invitations for the club manager
    * @throws BadRequestException If the manager does not belong to a club
    */
-  async listActivePendingInvites(
+  async listSentInvitesForManager(
     manager: AccessTokenPayload,
-  ): Promise<ClubSentInvitationResponseDto[]> {
+    query: ClubSentInvitationSearchQueryDto,
+  ): Promise<PaginatedClubSentInvitationsResponseDto> {
     if (!manager.club_id) {
       throw new BadRequestException(
         'Manager must belong to a club to view invitations',
       );
     }
 
-    const invites =
-      await this.invitationRepository.findActivePendingInvitesByClub(
+    const { page = 1, limit = 10 } = query;
+    const [invitations, total] =
+      await this.invitationRepository.searchSentInvitesByClub(
         manager.club_id,
+        query,
       );
 
-    return invites.map((invite) =>
+    const mappedInvitations = invitations.map((invite) =>
       ClubSentInvitationResponseDto.fromEntity(invite),
     );
+
+    const response = new PaginatedClubSentInvitationsResponseDto();
+    response.invitations = mappedInvitations;
+    response.total = total;
+    response.page = page;
+    response.limit = limit;
+
+    return response;
   }
 
   /**
@@ -264,7 +272,6 @@ export class InvitationService {
     try {
       const invite = await queryRunner.manager.findOne(Invitation, {
         where: { id: inviteId },
-        relations: ['club', 'from_user', 'to_user'],
         lock: { mode: 'pessimistic_write' },
       });
 
@@ -388,17 +395,12 @@ export class InvitationService {
   }
 
   /**
-   * Generates a type-safe unique invitation token and sets expiration date to 7 days from now.
+   * Sets invitation expiration date to 7 days from now.
    *
-   * @returns Object containing the generated hex tokens (raw and hashed) and expiresAt date
+   * @returns Expiration date
    */
-  private generateInvitationToken(): {
-    rawToken: string;
-    expiresAt: Date;
-  } {
-    const rawToken = crypto.randomBytes(32).toString('hex');
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-    return { rawToken, expiresAt };
+  private generateInvitationExpiry(): Date {
+    return new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
   }
 
   /**
@@ -407,17 +409,15 @@ export class InvitationService {
    * @param invitation The saved invitation entity
    * @param targetEmail The email of the target user
    * @param clubName The name of the inviting club
-   * @param rawToken The raw invitation token
    */
   private emitInvitationEvent(
     invitation: Invitation,
     targetEmail: string,
     clubName: string,
-    rawToken: string,
   ): void {
     const baseUrl = this.appConfig.baseUrl;
     const api = this.appConfig.apiPrefix;
-    const actionUrl = `${baseUrl}/${api}/invites/${invitation.id}/respond?token=${rawToken}`;
+    const actionUrl = `${baseUrl}/${api}/invites/${invitation.id}/respond`;
 
     this.eventEmitter.emit(InvitationEvents.USER_INVITED, {
       email: targetEmail,
