@@ -871,4 +871,62 @@ describe('ClubService', () => {
       );
     });
   });
+
+  describe('liquidateClub', () => {
+    it('should throw NotFoundException if club is not found', async () => {
+      clubRepository.findNotDeletedById.mockResolvedValue(null);
+
+      await expect(service.liquidateClub('club-uuid')).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('should liquidate club successfully and update associated users/tokens', async () => {
+      const mockClub = { id: 'club-uuid', status: ClubStatus.ACTIVE };
+      clubRepository.findNotDeletedById.mockResolvedValue(mockClub);
+      mockQueryRunner.manager.find.mockResolvedValue([
+        { id: 'member-1' },
+        { id: 'member-2' },
+      ]);
+
+      await service.liquidateClub('club-uuid');
+
+      expect(mockClub.status).toBe(ClubStatus.SOFT_DELETED);
+      expect(mockQueryRunner.manager.save).toHaveBeenCalledWith(Club, mockClub);
+      expect(mockQueryRunner.manager.softRemove).toHaveBeenCalledWith(
+        Club,
+        mockClub,
+      );
+      expect(mockQueryRunner.manager.find).toHaveBeenCalledWith(User, {
+        where: { club_id: 'club-uuid' },
+        select: { id: true },
+      });
+      expect(mockQueryRunner.manager.update).toHaveBeenCalledWith(
+        User,
+        expect.any(Object),
+        {
+          club_id: null,
+          member_role: TeamRole.NONE,
+          last_security_action_at: expect.any(Date),
+        },
+      );
+      expect(mockQueryRunner.manager.delete).toHaveBeenCalledWith(AuthToken, {
+        user_id: expect.any(Object),
+        type: AuthTokenType.REFRESH,
+      });
+      expect(mockQueryRunner.commitTransaction).toHaveBeenCalled();
+    });
+
+    it('should rollback transaction and throw error on failure', async () => {
+      const mockClub = { id: 'club-uuid', status: ClubStatus.ACTIVE };
+      clubRepository.findNotDeletedById.mockResolvedValue(mockClub);
+      mockQueryRunner.manager.save.mockRejectedValue(new Error('DB Error'));
+
+      await expect(service.liquidateClub('club-uuid')).rejects.toThrow(
+        'DB Error',
+      );
+      expect(mockQueryRunner.rollbackTransaction).toHaveBeenCalled();
+      expect(mockQueryRunner.release).toHaveBeenCalled();
+    });
+  });
 });
