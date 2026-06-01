@@ -1,7 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { AccountStatus } from '../../../common/enums/account-status.enum';
 import { SystemRole } from '../../../common/enums/system-role.enum';
-import { MemberRole } from '../../../common/enums/member-role.enum';
+import { TeamRole } from '../../../common/enums/team-role.enum';
 import { ClubStatus } from '../../club/constants/club-status.enum';
 import { Expose, Type } from 'class-transformer';
 
@@ -67,8 +67,8 @@ export class UserProfileResDto {
   club_id: string | null;
 
   @Expose()
-  @ApiProperty({ enum: MemberRole, nullable: true })
-  member_role: MemberRole | null;
+  @ApiProperty({ enum: TeamRole, nullable: true })
+  member_role: TeamRole | null;
 
   @Expose()
   @ApiProperty({ enum: SystemRole })

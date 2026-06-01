@@ -6,13 +6,11 @@ import { FavoriteRepository } from '../../../src/modules/user/repositories/favor
 import { DataSource } from 'typeorm';
 import { PinoLogger } from 'nestjs-pino';
 import { AccountStatus } from '../../../src/common/enums/account-status.enum';
-import { MemberRole } from '../../../src/common/enums/member-role.enum';
+import { TeamRole } from '../../../src/common/enums/team-role.enum';
 import { SystemRole } from '../../../src/common/enums/system-role.enum';
 import { ClubStatus } from '../../../src/modules/club/constants/club-status.enum';
-import {
-  UserSortField,
-  SortOrder,
-} from '../../../src/modules/user/dto/user-search.dto';
+import { UserSortField } from '../../../src/modules/user/dto/user-search.dto';
+import { SortOrder } from '../../../src/common/dtos/pagination.dto';
 import {
   NotFoundException,
   BadRequestException,
@@ -110,7 +108,7 @@ describe('UserService', () => {
           last_name: 'Doe',
           status: AccountStatus.ACTIVE,
           system_role: SystemRole.ADMIN,
-          member_role: MemberRole.OWNER,
+          member_role: TeamRole.OWNER,
           created_at: new Date(),
         },
       ];
@@ -162,7 +160,7 @@ describe('UserService', () => {
     it('should throw BadRequestException if user is owner of active club and has other members', async () => {
       const mockUser = {
         id: userId,
-        member_role: MemberRole.OWNER,
+        member_role: TeamRole.OWNER,
         club_id: 'club-uuid',
         club: {
           id: 'club-uuid',
@@ -188,7 +186,7 @@ describe('UserService', () => {
         id: userId,
         email: 'original@example.com',
         username: 'original_user',
-        member_role: MemberRole.OWNER,
+        member_role: TeamRole.OWNER,
         club_id: 'club-uuid',
         club: {
           id: 'club-uuid',
@@ -211,7 +209,7 @@ describe('UserService', () => {
 
       // Verify fields are updated and anonymized
       expect(mockUser.club_id).toBeNull();
-      expect(mockUser.member_role).toBe(MemberRole.NONE);
+      expect(mockUser.member_role).toBe(TeamRole.NONE);
       expect(mockUser.status).toBe(AccountStatus.SOFT_DELETED);
       expect(mockUser.original_email).toBe('original@example.com');
       expect(mockUser.original_username).toBe('original_user');
@@ -283,12 +281,14 @@ describe('UserService', () => {
         last_name: 'Doe',
         status: AccountStatus.ACTIVE,
         system_role: SystemRole.USER,
-        member_role: MemberRole.OWNER,
+        member_role: TeamRole.OWNER,
         created_at: new Date(),
       };
       userRepository.findActiveById.mockResolvedValue(mockUser);
 
-      const result = await service.findOneByIdOrFail(userId, { sys_role: SystemRole.USER } as any);
+      const result = await service.findOneByIdOrFail(userId, {
+        sys_role: SystemRole.USER,
+      } as any);
 
       expect(result.id).toBe(userId);
       expect(result.email).toBe('john@example.com');
@@ -303,12 +303,14 @@ describe('UserService', () => {
         last_name: 'One',
         status: AccountStatus.ACTIVE,
         system_role: SystemRole.ADMIN,
-        member_role: MemberRole.OWNER,
+        member_role: TeamRole.OWNER,
         created_at: new Date(),
       };
       userRepository.findActiveById.mockResolvedValue(mockAdmin);
 
-      const result = await service.findOneByIdOrFail(userId, { sys_role: SystemRole.ADMIN } as any);
+      const result = await service.findOneByIdOrFail(userId, {
+        sys_role: SystemRole.ADMIN,
+      } as any);
 
       expect(result.id).toBe(userId);
       expect(result.email).toBe('admin@example.com');

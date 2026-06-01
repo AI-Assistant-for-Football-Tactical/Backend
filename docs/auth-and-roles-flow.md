@@ -16,11 +16,11 @@ The application uses **Security by Default**. Because the `JwtAuthGuard` and `Ro
 
 ## 🛠️ Decorator Toolbox
 
-| Decorator            | Purpose                                        | Usage                            |
-| -------------------- | ---------------------------------------------- | -------------------------------- |
-| **`@Public()`**      | Bypasses all security execpt for `LocalGuard`. | `@Public()`                      |
-| **`@SystemRoles()`** | Filters by platform role.                      | `@SystemRoles(SystemRole.ADMIN)` |
-| **`@MemberRoles()`** | Filters by club/group role.                    | `@MemberRoles(MemberRole.COACH)` |
+| Decorator                | Purpose                                        | Usage                              |
+| ------------------------ | ---------------------------------------------- | ---------------------------------- |
+| **`@Public()`**          | Bypasses all security execpt for `LocalGuard`. | `@Public()`                        |
+| **`@SystemRoles()`**     | Filters by platform role.                      | `@SystemRoles(SystemRole.ADMIN)`   |
+| **`@RequireTeamRole()`** | Filters by club/group role.                    | `@RequireTeamRole(TeamRole.COACH)` |
 
 ---
 
@@ -57,7 +57,7 @@ findAll() {
 
 ```typescript
 @Post('club/strategy')
-@MemberRoles(MemberRole.COACH, MemberRole.OWNER)
+@RequireTeamRole(TeamRole.COACH, TeamRole.OWNER)
 createStrategy() {
   return this.service.save();
 }

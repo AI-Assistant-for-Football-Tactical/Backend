@@ -11,13 +11,14 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { User } from './entities/user.entity';
 import { DataSource, In, Not } from 'typeorm';
 import { AccountStatus } from '../../common/enums/account-status.enum';
-import { MemberRole } from '../../common/enums/member-role.enum';
+import { TeamRole } from '../../common/enums/team-role.enum';
 import { PinoLogger } from 'nestjs-pino';
 import { ClubStatus } from '../club/constants/club-status.enum';
 import { Club } from '../club/entities/club.entity';
 import { UserRepository } from './repositories/user.repository';
 import { FavoriteRepository } from './repositories/favorite.repository';
-import { UserSortField, SortOrder } from './dto/user-search.dto';
+import { UserSortField } from './dto/user-search.dto';
+import { SortOrder } from '../../common/dtos/pagination.dto';
 import type {
   UserSearchQueryDto,
   UserSearchResultDto,
@@ -137,7 +138,7 @@ export class UserService {
     try {
       // If user is a lone owner of an active club, dissolve the club atomically
       if (
-        user.member_role === MemberRole.OWNER &&
+        user.member_role === TeamRole.OWNER &&
         user.club &&
         user.club?.owner_id === user.id &&
         user.club?.status === ClubStatus.ACTIVE
@@ -149,7 +150,7 @@ export class UserService {
       }
 
       user.club_id = null;
-      user.member_role = MemberRole.NONE;
+      user.member_role = TeamRole.NONE;
       user.last_security_action_at = updateSecurityActionTime();
 
       // We maintain the user row but change status and deleted_at
@@ -245,7 +246,7 @@ export class UserService {
   async updateClubMembership(
     userId: string,
     clubId: string | null = null,
-    role: MemberRole = MemberRole.NONE,
+    role: TeamRole = TeamRole.NONE,
   ): Promise<void> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
@@ -288,8 +289,8 @@ export class UserService {
    */
   async searchUsers(dto: UserSearchQueryDto): Promise<UserSearchResultDto> {
     const {
-      page,
-      limit,
+      page = 1,
+      limit = 10,
       sortBy = UserSortField.CREATED_AT,
       sortOrder = SortOrder.DESC,
       ...filters
@@ -446,7 +447,7 @@ export class UserService {
     }
 
     if (
-      user.member_role === MemberRole.OWNER &&
+      user.member_role === TeamRole.OWNER &&
       user.club &&
       user.club?.owner_id === user.id &&
       user.club?.status === ClubStatus.ACTIVE
@@ -490,7 +491,7 @@ export class UserService {
   //   // Owner cannot deactivate their account, transfer ownership first or delete the club.
   //   if (
   //     user.club?.owner_id === user.id &&
-  //     user.member_role === MemberRole.OWNER &&
+  //     user.member_role === TeamRole.OWNER &&
   //     user.club?.status === ClubStatus.ACTIVE
   //   ) {
   //     throw new BadRequestException(

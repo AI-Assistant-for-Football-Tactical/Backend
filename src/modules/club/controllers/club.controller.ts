@@ -16,8 +16,8 @@ import {
   ApiBadRequestResponse,
   ApiForbiddenResponse,
 } from '@nestjs/swagger';
-import { MemberRoles } from '../../../common/decorators/roles.decorator';
-import { MemberRole } from '../../../common/enums/member-role.enum';
+import { RequireTeamRole } from '../../../common/decorators/roles.decorator';
+import { TeamRole } from '../../../common/enums/team-role.enum';
 import { CurrentUser } from '../../../common/decorators/current-user.decorator';
 import { SuccessionDto, ClubResponseDto } from '../dto/club-governance.dto';
 import { ClubService } from '../club.service';
@@ -40,7 +40,7 @@ export class ClubController {
    * @returns    The club details
    */
   @Get('mine')
-  @MemberRoles(MemberRole.OWNER, MemberRole.STAFF)
+  @RequireTeamRole(TeamRole.OWNER, TeamRole.STAFF)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Get the authenticated user's club details" })
   @ApiOkResponse({ type: ClubResponseDto })
@@ -60,7 +60,7 @@ export class ClubController {
    * @param user - Authenticated user from JWT
    */
   @Post('leave')
-  @MemberRoles(MemberRole.OWNER, MemberRole.STAFF)
+  @RequireTeamRole(TeamRole.OWNER, TeamRole.STAFF)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary: 'Leave the club (STAFF unlinks; lone OWNER dissolves club)',
@@ -82,7 +82,7 @@ export class ClubController {
    * @param dto  - Succession payload with targetUserId
    */
   @Post('succession')
-  @MemberRoles(MemberRole.OWNER)
+  @RequireTeamRole(TeamRole.OWNER)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary: 'Transfer club ownership to a STAFF member (OWNER only)',

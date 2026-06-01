@@ -20,8 +20,8 @@ import {
 import { SubmitClaimDto } from '../dto/submit-claim.dto';
 import { ClaimStatusResponseDto } from '../dto/claim-response.dto';
 import { CurrentUser } from '../../../common/decorators/current-user.decorator';
-import { MemberRole } from '../../../common/enums/member-role.enum';
-import { MemberRoles } from '../../../common/decorators/roles.decorator';
+import { TeamRole } from '../../../common/enums/team-role.enum';
+import { RequireTeamRole } from '../../../common/decorators/roles.decorator';
 import { ClubClaimService } from '../club-claim.service';
 import type { AccessTokenPayload } from '../../auth/constants/token-payload.type';
 
@@ -32,7 +32,7 @@ import type { AccessTokenPayload } from '../../auth/constants/token-payload.type
 @ApiTags('Claims')
 @ApiBearerAuth()
 @Controller('claims')
-@MemberRoles(MemberRole.NONE)
+@RequireTeamRole(TeamRole.NONE)
 export class ClaimsController {
   constructor(private readonly clubClaimService: ClubClaimService) {}
 

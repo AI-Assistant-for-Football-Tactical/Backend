@@ -1,7 +1,7 @@
 import { Entity, Column, JoinColumn, ManyToOne, OneToMany } from 'typeorm';
 import { SystemRole } from '../../../common/enums/system-role.enum';
 import { AccountStatus } from '../../../common/enums/account-status.enum';
-import { MemberRole } from '../../../common/enums/member-role.enum';
+import { TeamRole } from '../../../common/enums/team-role.enum';
 import { Club } from '../../club/entities/club.entity';
 import { Favorite } from './favorite.entity';
 import { BaseEntity } from '../../../common/entities/base.entity';
@@ -67,8 +67,8 @@ export class User extends BaseEntity {
   @JoinColumn({ name: 'club_id' })
   club: Club | null;
 
-  @Column({ type: 'enum', enum: MemberRole, default: MemberRole.NONE })
-  member_role: MemberRole;
+  @Column({ type: 'enum', enum: TeamRole, default: TeamRole.NONE })
+  member_role: TeamRole;
 
   @Column({
     type: 'enum',
