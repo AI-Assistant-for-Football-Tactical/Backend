@@ -5,6 +5,7 @@ import { InvitationRespondAction } from '../../../src/modules/invitation/constan
 import { ClubSentInvitationSearchQueryDto } from '../../../src/modules/invitation/dto/invitation-search-query.dto';
 import type { AccessTokenPayload } from '../../../src/modules/auth/constants/token-payload.type';
 import { TeamRole } from '../../../src/common/enums/team-role.enum';
+import { ActiveClubGuard } from '../../../src/common/guards/active-club.guard';
 import { SystemRole } from '../../../src/common/enums/system-role.enum';
 import {
   AdminInvitationResponseDto,
@@ -82,7 +83,10 @@ describe('InvitationController', () => {
       providers: [
         { provide: InvitationService, useValue: mockInvitationService },
       ],
-    }).compile();
+    })
+      .overrideGuard(ActiveClubGuard)
+      .useValue({ canActivate: jest.fn() })
+      .compile();
 
     controller = module.get<InvitationController>(InvitationController);
   });
