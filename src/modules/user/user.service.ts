@@ -24,21 +24,22 @@ import type {
   UserSearchResultDto,
 } from './dto/user-search.dto';
 import { UserPublicProfileResDto } from './dto/user-public-profile.dto';
-import { SystemRole } from '../../common/enums/system-role.enum';
+import {
+  SystemRole,
+  isRoleHigherThan,
+} from '../../common/enums/system-role.enum';
 import type { AccessTokenPayload } from '../auth/constants/token-payload.type';
 import { updateSecurityActionTime } from '../auth/helpers/security.helper';
-// import { EventEmitter2 } from '@nestjs/event-emitter';
-// import { AuthService } from '../auth/auth.service';
-// import { SecurityEvents } from '../../common/events/security.events';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { SecurityEvents } from '../../common/events/security.events';
+import { UpdateUserStatusByAdminDto } from './dto/update-user-status.dto';
 
 @Injectable()
 export class UserService {
   constructor(
     private readonly userRepository: UserRepository,
     private readonly favoriteRepository: FavoriteRepository,
-    // @Inject(forwardRef(() => AuthService))
-    // private readonly eventEmitter: EventEmitter2,
-    // private readonly authService: AuthService,
+    private readonly eventEmitter: EventEmitter2,
     private readonly dataSource: DataSource,
     private readonly logger: PinoLogger,
   ) {}
@@ -366,6 +367,86 @@ export class UserService {
       page,
       limit,
     };
+  }
+
+  /**
+   * Updates a user's account status (e.g., BANNED, ACTIVE).
+   *
+   * @param requester - The authenticated user performing the status update.
+   * @param targetUserId - The UUID of the user to update.
+   * @param dto - Data containing the new status.
+   * @throws NotFoundException if the user does not exist.
+   * @throws ForbiddenException if the requester attempts to modify a higher system role user.
+   * @returns A promise that resolves when the update is complete.
+   */
+  async updateUserStatusByAdmin(
+    requester: AccessTokenPayload,
+    targetUserId: string,
+    dto: UpdateUserStatusByAdminDto,
+  ): Promise<void> {
+    const targetUser = await this.userRepository.internalRepo.findOne({
+      where: { id: targetUserId },
+      select: { id: true, system_role: true },
+    });
+
+    if (!targetUser) {
+      throw new NotFoundException(`User with ID ${targetUserId} not found.`);
+    }
+
+    if (isRoleHigherThan(targetUser.system_role, requester.sys_role)) {
+      throw new ForbiddenException(
+        'You cannot modify the status of a user with a higher system role.',
+      );
+    }
+
+    await this.userRepository.internalRepo.update(targetUserId, {
+      status: dto.status,
+      last_security_action_at: updateSecurityActionTime(),
+    });
+
+    this.eventEmitter.emit(SecurityEvents.ADMIN_USER_STATUS_UPDATED, {
+      targetUserId,
+      newStatus: dto.status,
+    });
+  }
+
+  /**
+   * Instantly revokes all active sessions for a specific user.
+   * Sets last_security_action_at to now.
+   *
+   * @param requester - The authenticated user performing the revocation.
+   * @param targetUserId - The UUID of the user whose sessions are to be revoked.
+   * @throws NotFoundException if the user does not exist.
+   * @throws ForbiddenException if the requester attempts to modify a higher system role user.
+   * @returns A promise that resolves when the revocation is complete.
+   */
+  async revokeSessionsByAdmin(
+    requester: AccessTokenPayload,
+    targetUserId: string,
+  ): Promise<void> {
+    const targetUser = await this.userRepository.internalRepo.findOne({
+      where: { id: targetUserId },
+      select: { id: true, system_role: true, status: true },
+    });
+
+    if (!targetUser) {
+      throw new NotFoundException(`User with ID ${targetUserId} not found.`);
+    }
+
+    if (isRoleHigherThan(targetUser.system_role, requester.sys_role)) {
+      throw new ForbiddenException(
+        'You cannot modify the sessions of a user with a higher system role.',
+      );
+    }
+
+    await this.userRepository.internalRepo.update(targetUserId, {
+      last_security_action_at: updateSecurityActionTime(),
+    });
+
+    this.eventEmitter.emit(SecurityEvents.ADMIN_USER_STATUS_UPDATED, {
+      targetUserId,
+      newStatus: targetUser.status,
+    });
   }
 
   /**
