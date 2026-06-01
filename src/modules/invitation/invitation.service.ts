@@ -10,9 +10,11 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 
 import { Invitation } from './entities/invitation.entity';
 import { User } from '../user/entities/user.entity';
+import { Club } from '../club/entities/club.entity';
 import { InvitationRepository } from './repositories/invitation.repository';
 import { UserRepository } from '../user/repositories/user.repository';
 import { ClubRepository } from '../club/repositories/club.repository';
+import { ClubStatus } from '../club/constants/club-status.enum';
 import { InvitationStatus } from './constants/invitation-status.enum';
 import { TeamRole } from '../../common/enums/team-role.enum';
 import { InvitationRespondAction } from './constants/invitation-respond-action.enum';
@@ -310,6 +312,17 @@ export class InvitationService {
         await queryRunner.commitTransaction();
         committed = true;
         return AdminInvitationResponseDto.fromEntity(updatedInvite);
+      }
+
+      const club = await queryRunner.manager.findOne(Club, {
+        where: { id: invite.club_id, status: ClubStatus.ACTIVE },
+        lock: { mode: 'pessimistic_read' },
+      });
+
+      if (!club) {
+        throw new ConflictException(
+          'Invitation cannot be accepted because the club is not active',
+        );
       }
 
       // 1. Lock the user row

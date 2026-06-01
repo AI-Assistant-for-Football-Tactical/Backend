@@ -9,6 +9,7 @@ import { AppConfig } from '../../../src/core/config';
 import { InvitationStatus } from '../../../src/modules/invitation/constants/invitation-status.enum';
 import { TeamRole } from '../../../src/common/enums/team-role.enum';
 import { InvitationRespondAction } from '../../../src/modules/invitation/constants/invitation-respond-action.enum';
+import { ClubStatus } from '../../../src/modules/club/constants/club-status.enum';
 import {
   BadRequestException,
   NotFoundException,
@@ -17,6 +18,7 @@ import {
 } from '@nestjs/common';
 import { Invitation } from '../../../src/modules/invitation/entities/invitation.entity';
 import { User } from '../../../src/modules/user/entities/user.entity';
+import { Club } from '../../../src/modules/club/entities/club.entity';
 import { InvitationEvents } from '../../../src/common/events/invitation.events';
 import type { AccessTokenPayload } from '../../../src/modules/auth/constants/token-payload.type';
 import { SystemRole } from '../../../src/common/enums/system-role.enum';
@@ -91,7 +93,9 @@ type MockQueryRunner = {
   rollbackTransaction: jest.MockedFunction<() => Promise<void>>;
   release: jest.MockedFunction<() => Promise<void>>;
   manager: {
-    findOne: jest.MockedFunction<() => Promise<User | Invitation | null>>;
+    findOne: jest.MockedFunction<
+      () => Promise<User | Invitation | Club | null>
+    >;
     save: jest.MockedFunction<
       (
         entity: typeof Invitation | typeof User,
@@ -178,6 +182,11 @@ const invitationEntity = (overrides: Partial<Invitation> = {}): Invitation =>
     deleted_at: null,
     ...overrides,
   }) as Invitation;
+
+const activeClub = {
+  id: 'club-id',
+  status: ClubStatus.ACTIVE,
+} as Club;
 
 // Mock ConfigModule
 jest.mock('@nestjs/config', () => ({
@@ -651,7 +660,8 @@ describe('InvitationService', () => {
       it('should throw NotFoundException if user is not found in database', async () => {
         mockQueryRunner.manager.findOne
           .mockResolvedValueOnce(mockInvite)
-          .mockResolvedValueOnce(null); // second find is for user
+          .mockResolvedValueOnce(activeClub)
+          .mockResolvedValueOnce(null); // third find is for user
 
         await expect(
           service.respondToInvitation(userPayload, inviteId, {
@@ -663,6 +673,25 @@ describe('InvitationService', () => {
         expect(mockQueryRunner.release).toHaveBeenCalled();
       });
 
+      it('should throw ConflictException if the inviting club is not active', async () => {
+        mockQueryRunner.manager.findOne
+          .mockResolvedValueOnce(mockInvite)
+          .mockResolvedValueOnce(null);
+
+        await expect(
+          service.respondToInvitation(userPayload, inviteId, {
+            action: InvitationRespondAction.ACCEPT,
+          }),
+        ).rejects.toThrow(ConflictException);
+
+        expect(mockQueryRunner.manager.findOne).toHaveBeenCalledWith(Club, {
+          where: { id: 'club-id', status: ClubStatus.ACTIVE },
+          lock: { mode: 'pessimistic_read' },
+        });
+        expect(mockQueryRunner.rollbackTransaction).toHaveBeenCalled();
+        expect(mockQueryRunner.release).toHaveBeenCalled();
+      });
+
       it('should throw ConflictException if user already belongs to a club', async () => {
         const mockUser = userEntity({
           member_role: TeamRole.STAFF,
@@ -670,6 +699,7 @@ describe('InvitationService', () => {
         });
         mockQueryRunner.manager.findOne
           .mockResolvedValueOnce(mockInvite)
+          .mockResolvedValueOnce(activeClub)
           .mockResolvedValueOnce(mockUser);
 
         await expect(
@@ -706,6 +736,7 @@ describe('InvitationService', () => {
 
         mockQueryRunner.manager.findOne
           .mockResolvedValueOnce(dbInvite) // invitation lock
+          .mockResolvedValueOnce(activeClub) // club status check
           .mockResolvedValueOnce(mockUser); // user lock
 
         const result = await service.respondToInvitation(
