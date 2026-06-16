@@ -1,0 +1,1 @@
+export const CACHE_TTL = 10 * 60 * 1000;
