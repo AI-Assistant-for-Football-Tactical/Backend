@@ -15,6 +15,7 @@ import { JwtAuthGuard } from './modules/auth/guards/jwt.guard';
 import { PrematchModule } from './modules/prematch/prematch.module';
 import { PostmatchModule } from './modules/postmatch/postmatch.module';
 import { StorageModule } from './modules/storage/storage.module';
+import { InmatchModule } from './modules/inmatch/inmatch.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 
 /**
@@ -34,6 +35,7 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
     AdminModule,
     PrematchModule,
     PostmatchModule,
+    InmatchModule,
     StorageModule,
     EventEmitterModule.forRoot(),
   ],
