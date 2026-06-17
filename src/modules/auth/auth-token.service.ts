@@ -1,6 +1,6 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, type EntityManager } from 'typeorm';
 import { AuthTokenConfig } from '../../core/config';
 import { JwtService } from '@nestjs/jwt';
 import { PinoLogger } from 'nestjs-pino';
@@ -31,7 +31,10 @@ export class AuthTokenService {
    * @returns The saved Token entity.
    * @throws InternalServerErrorException if database persistence fails.
    */
-  async createTokenRecord(dto: CreateTokenDto): Promise<AuthToken> {
+  async createTokenRecord(
+    dto: CreateTokenDto,
+    manager: EntityManager = this.tokenRepo.manager,
+  ): Promise<AuthToken> {
     const { token, ...tokenDto } = dto;
 
     // Handle expiration calculation if not provided
@@ -52,9 +55,10 @@ export class AuthTokenService {
       ...tokenDto,
     };
 
+    const tokenInstance = manager.create(AuthToken, tokenData);
+
     try {
-      const tokenInstance = this.tokenRepo.create(tokenData);
-      return await this.tokenRepo.save(tokenInstance);
+      return await manager.save(tokenInstance);
     } catch (err) {
       this.logger.error('Failed to persist token record', err);
       throw new InternalServerErrorException('Could not save token record');
@@ -66,15 +70,21 @@ export class AuthTokenService {
    * * @param userId - The ID of the user owning the token.
    * @returns The raw (unhashed) random token string to be sent to the client.
    */
-  async createRefreshToken(userId: string): Promise<string> {
+  async createRefreshToken(
+    userId: string,
+    manager: EntityManager = this.tokenRepo.manager,
+  ): Promise<string> {
     const token = this.generateRandomToken();
 
-    await this.createTokenRecord({
-      type: AuthTokenType.REFRESH,
-      user_id: userId,
-      token,
-      expires_at: new Date(this.tokenConfig.refreshTtl + Date.now()),
-    });
+    await this.createTokenRecord(
+      {
+        type: AuthTokenType.REFRESH,
+        user_id: userId,
+        token,
+        expires_at: new Date(this.tokenConfig.refreshTtl + Date.now()),
+      },
+      manager,
+    );
 
     return token;
   }
@@ -85,7 +95,7 @@ export class AuthTokenService {
    * @returns A signed JWT string.
    * @throws InternalServerErrorException if signing fails.
    */
-  createAccessToken(payload: AccessTokenPayload): string {
+  createAccessTokenOrThrow(payload: AccessTokenPayload): string {
     try {
       return this.jwtService.sign(payload, {
         // expiresIn expects seconds if passed as a number

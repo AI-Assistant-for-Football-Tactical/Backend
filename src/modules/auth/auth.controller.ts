@@ -251,4 +251,18 @@ export class AuthController {
       changePasswordReqDto.currentPassword,
     );
   }
+  /**
+   * Logs out the user and invalidates all active sessions.
+   *
+   * @param payload - The authenticated user payload.
+   */
+  @Post('logout')
+  @ApiOperation({
+    summary: 'Logout the user and revoke all active sessions.',
+  })
+  @ApiBearerAuth()
+  @ResponseMessage('Successfully logged out. All sessions revoked.')
+  async logout(@CurrentUser() payload: AccessTokenPayload): Promise<void> {
+    return await this.authService.logout(payload.id);
+  }
 }

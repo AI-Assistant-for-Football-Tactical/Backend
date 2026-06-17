@@ -1,5 +1,4 @@
-import * as bcrypt from 'bcrypt';
-import { MoreThan, Repository } from 'typeorm';
+import { In, MoreThan, Not, Repository, DataSource } from 'typeorm';
 import { AppConfig } from '../../core/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
@@ -7,21 +6,28 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  InternalServerErrorException,
   UnauthorizedException,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { AuthToken } from './entities/token.entity';
 import { User } from '../user/entities/user.entity';
 import { SignUpReqDto } from './dtos/sign-up.dto';
-import type { CreateTokenDto } from './dtos/create-token.dto';
 import { AuthTokenType } from './constants/auth-token-type.enum';
 import { AuthEventsPayload } from './constants/auth-events-payload';
-import { PASSWORD_HASH_SALT_ROUNDS } from './constants/auth.constants';
 import { PinoLogger } from 'nestjs-pino';
 import { AuthTokenService } from './auth-token.service';
-import type { AccessTokenPayload } from './constants/token-payload.type';
 import { UserService } from '../user/user.service';
 import { AccountStatus } from '../../common/enums/account-status.enum';
+import { UserRepository } from '../user/repositories/user.repository';
+import { hashPassword, comparePassword } from '../../utils/hash/password.hash';
+import { SecurityEvents } from '../../common/events/security.events';
+import { updateSecurityActionTime } from './helpers/security.helper';
+import type { CreateTokenDto } from './dtos/create-token.dto';
 import type { AuthTokens } from './constants/auth-tokens.type';
+import type { AccessTokenPayload } from './constants/token-payload.type';
+import { TeamRole } from '../../common/enums/team-role.enum';
 
 type verificationTokens = {
   url: string;
@@ -42,15 +48,16 @@ export class AuthService {
    * @param {UserService} userService - The service for managing user entities.
    */
   constructor(
-    @InjectRepository(User)
-    private userRepo: Repository<User>,
+    private readonly userRepository: UserRepository,
     @InjectRepository(AuthToken)
     private tokenRepo: Repository<AuthToken>,
     private readonly eventEmitter: EventEmitter2,
     private readonly appConfig: AppConfig,
     private readonly logger: PinoLogger,
     private readonly tokenService: AuthTokenService,
+    @Inject(forwardRef(() => UserService))
     private readonly userService: UserService,
+    private readonly dataSource: DataSource,
   ) {}
 
   /**
@@ -66,39 +73,42 @@ export class AuthService {
   ): Promise<AuthTokens & verificationTokens> {
     this.logger.info('Attempting Sign Up:', {
       email: signUpDto.email,
+      username: signUpDto.username,
     });
 
     const { password, ...userData } = signUpDto;
 
     // Check if user with the same email or username already exists
-    const existingUser = await this.userRepo.findOne({
+    const existingUser = await this.userRepository.internalRepo.findOne({
       where: [{ email: userData.email }, { username: userData.username }],
     });
 
     if (existingUser) {
-      this.logger.error('Used Email or Username.');
       if (existingUser.email === signUpDto.email) {
+        this.logger.error('Email already registered.');
         throw new ConflictException('Email already registered.');
       } else {
+        this.logger.error('Username is already taken.');
         throw new ConflictException('Username is already taken.');
       }
     }
 
-    // Create and Save user to DB
-    const newUser: User = this.userRepo.create({
+    // Create and Save fresh user to DB (works for both new emails and previously soft-deleted ones)
+    const newUser = this.userRepository.internalRepo.create({
       ...userData,
-      password_hash: await this.hashPassword(password),
-      last_security_action_at: new Date(),
+      password_hash: await hashPassword(password),
+      last_security_action_at: updateSecurityActionTime(),
     });
 
-    await this.userRepo.save(newUser);
+    await this.userRepository.internalRepo.save(newUser);
 
     // generate email verification token and send it
-    const { token, url } = await this.handleUserEmailVerification(newUser);
+    const { token, url } =
+      await this.createEmailVerificationTokenAndUrl(newUser);
 
     // generate access and refresh tokens
-    const accessToken = this.tokenService.createAccessToken(
-      this.AccessPayload(newUser),
+    const accessToken = this.tokenService.createAccessTokenOrThrow(
+      this.buildAccessPayload(newUser),
     );
     const refreshToken = await this.tokenService.createRefreshToken(newUser.id);
 
@@ -118,16 +128,17 @@ export class AuthService {
    */
   async login(user: User): Promise<AuthTokens> {
     // Generate access and refresh tokens
-    const payload = this.AccessPayload(user);
+    const payload = this.buildAccessPayload(user);
 
-    const accessToken: string = this.tokenService.createAccessToken(payload);
+    const accessToken: string =
+      this.tokenService.createAccessTokenOrThrow(payload);
     const refreshToken: string = await this.tokenService.createRefreshToken(
       user.id,
     );
 
-    this.logger.info('LogIn:', { username: user.username });
+    this.logger.info('LogIn:', payload);
 
-    return { accessToken: accessToken, refreshToken: refreshToken };
+    return { accessToken, refreshToken };
   }
 
   /**
@@ -144,11 +155,11 @@ export class AuthService {
   ): Promise<Omit<User, 'password_hash'> | null> {
     const isEmail = identifier.includes('@');
 
-    const qb = this.userRepo
+    const qb = this.userRepository.internalRepo
       .createQueryBuilder('user')
       .addSelect('user.password_hash')
-      .where('user.status IN (:...statuses)', {
-        statuses: [AccountStatus.ACTIVE, AccountStatus.PENDING_VERIFICATION],
+      .where('user.status NOT IN (:...statuses)', {
+        statuses: [AccountStatus.BANNED, AccountStatus.SOFT_DELETED],
       });
 
     // Build the Identity Check
@@ -160,12 +171,19 @@ export class AuthService {
 
     const user = await qb.getOne();
 
-    if (!user) return null;
+    const isPasswordCorrect = await comparePassword(
+      password,
+      user?.password_hash ?? 'DUMMY_HASH',
+    );
 
-    const { password_hash, ...userData } = user;
-    const isPassCorrect = await this.comparePassword(password, password_hash);
+    if (!user || !isPasswordCorrect) return null;
 
-    return isPassCorrect ? userData : null;
+    const userData = {
+      ...user,
+      password_hash: undefined,
+    };
+
+    return userData;
   }
 
   /**
@@ -177,45 +195,58 @@ export class AuthService {
    * @throws {BadRequestException} If the user is not found, token is invalid, or expired.
    */
   async verifyUserEmail(id: string, token: string): Promise<User> {
-    const user: User | null = await this.userRepo.findOneBy({ id });
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
 
-    if (!user) {
-      throw new BadRequestException('User not found');
-    }
+    try {
+      const user = await queryRunner.manager.findOne(User, {
+        where: {
+          id,
+          status: Not(In([AccountStatus.BANNED, AccountStatus.SOFT_DELETED])),
+        },
+      });
 
-    if (
-      user.is_verified
-    ) {
-      throw new BadRequestException('User is already verified');
-    }
+      if (!user) throw new BadRequestException('User not found');
+      if (user.is_verified)
+        throw new BadRequestException('User is already verified');
 
-    const verifyToken: AuthToken | null = await this.tokenRepo.findOne({
-      where: {
-        token_hash: this.tokenService.hashToken(token),
+      const tokenHash = this.tokenService.hashToken(token);
+
+      const verifyToken: AuthToken | null = await this.tokenRepo.findOne({
+        where: {
+          token_hash: tokenHash,
+          user_id: user.id,
+          type: AuthTokenType.EMAIL_VERIFY,
+          expires_at: MoreThan(new Date()),
+        },
+      });
+
+      if (!verifyToken) {
+        throw new BadRequestException('Invalid or expired verification token');
+      }
+
+      await queryRunner.manager.remove(AuthToken, verifyToken);
+
+      user.is_verified = true;
+      user.status = AccountStatus.ACTIVE;
+      user.last_security_action_at = updateSecurityActionTime();
+      await queryRunner.manager.save(User, user);
+
+      await queryRunner.commitTransaction();
+
+      this.eventEmitter.emit(SecurityEvents.EMAIL_VERIFIED, {
         user_id: user.id,
-        type: AuthTokenType.EMAIL_VERIFY,
-        expires_at: MoreThan(new Date()),
-      },
-    });
+        action: 'email-verified',
+      });
 
-    if (!verifyToken) {
-      throw new BadRequestException('Invalid or expired verification token');
+      return user;
+    } catch (err) {
+      await queryRunner.rollbackTransaction();
+      throw err;
+    } finally {
+      await queryRunner.release();
     }
-
-    user.is_verified = true;
-    user.status = AccountStatus.ACTIVE;
-    user.last_security_action_at = new Date();
-    await Promise.all([
-      this.tokenRepo.remove(verifyToken),
-      this.userRepo.save(user),
-    ]);
-
-    this.eventEmitter.emit('security-update', {
-      user_id: user.id,
-      action: 'email-verified',
-    });
-
-    return user;
   }
 
   /**
@@ -225,17 +256,39 @@ export class AuthService {
    * @throws {BadRequestException} If the user is invalid or already verified.
    */
   async requestEmailVerification(id: string): Promise<verificationTokens> {
-    const user: User | null = await this.userRepo.findOneBy({ id });
+    const user = await this.userRepository.findNotDeletedNotBannedById(id);
 
-    if (!user) {
-      throw new BadRequestException('Invalid user id.');
-    }
-
-    if (user.is_verified) {
+    if (!user) throw new BadRequestException('Invalid user id.');
+    if (user.status === AccountStatus.BANNED)
+      throw new BadRequestException('User is banned.');
+    if (user.is_verified)
       throw new BadRequestException('User is already verified.');
-    }
 
-    return await this.handleUserEmailVerification(user);
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      // delete existing email verification token if exists
+      await queryRunner.manager.delete(AuthToken, {
+        user_id: user.id,
+        type: AuthTokenType.EMAIL_VERIFY,
+      });
+
+      const result = await this.createEmailVerificationTokenAndUrl(
+        user,
+        queryRunner.manager,
+      );
+      await queryRunner.commitTransaction();
+
+      this.emitVerificationEmail(user, result.url);
+      return result;
+    } catch (err) {
+      await queryRunner.rollbackTransaction();
+      throw err;
+    } finally {
+      await queryRunner.release();
+    }
   }
 
   /**
@@ -254,32 +307,73 @@ export class AuthService {
     const refreshTokenHash = this.tokenService.hashToken(refreshToken);
 
     const token: AuthToken | null = await this.tokenRepo.findOne({
-      where: { token_hash: refreshTokenHash, type: AuthTokenType.REFRESH },
+      where: {
+        token_hash: refreshTokenHash,
+        type: AuthTokenType.REFRESH,
+        expires_at: MoreThan(new Date()),
+      },
     });
 
-    if (!token || token.expires_at < new Date()) {
+    if (!token) {
       throw new UnauthorizedException('Invalid or expired refresh token.');
     }
 
-    // Validate the user
-    const user: User | null = await this.userService.findOneById(token.user_id);
+    // validate user
+    const user = await this.userService.findOneById(token.user_id);
 
     if (!user) {
-      throw new BadRequestException('User Not Found.');
+      this.logger.error('Refresh attempted for non-existent user', {
+        user_id: token.user_id,
+      });
+      throw new UnauthorizedException('Invalid or expired refresh token.');
     }
 
-    // Revoke the old refresh token
-    await this.tokenRepo.remove(token);
+    if (user.status === AccountStatus.BANNED) {
+      this.logger.warn('Banned user attempted token refresh', {
+        user_id: user.id,
+      });
+      throw new UnauthorizedException('Account suspended.');
+    }
 
-    // Generate access and refresh tokens
-    const payload = this.AccessPayload(user);
+    if (user.last_security_action_at > token.created_at) {
+      this.logger.warn(
+        'Refresh token invalidated by a subsequent security action',
+        {
+          user_id: user.id,
+        },
+      );
 
-    const newAccessToken: string = this.tokenService.createAccessToken(payload);
-    const newRefreshToken: string = await this.tokenService.createRefreshToken(
-      user.id,
-    );
+      throw new UnauthorizedException(
+        'Session invalidated. Please log in again.',
+      );
+    }
 
-    return { accessToken: newAccessToken, refreshToken: newRefreshToken };
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      // rotate refresh token
+      await queryRunner.manager.remove(AuthToken, token);
+
+      const rawNewRefreshToken = await this.tokenService.createRefreshToken(
+        user.id,
+        queryRunner.manager,
+      );
+
+      await queryRunner.commitTransaction();
+
+      const newAccessToken = this.tokenService.createAccessTokenOrThrow(
+        this.buildAccessPayload(user),
+      );
+
+      return { accessToken: newAccessToken, refreshToken: rawNewRefreshToken };
+    } catch (err) {
+      await queryRunner.rollbackTransaction();
+      throw err;
+    } finally {
+      await queryRunner.release();
+    }
   }
 
   /**
@@ -294,45 +388,35 @@ export class AuthService {
     userId: string,
     currentPassword: string,
   ): Promise<verificationTokens | void> {
-    const user: User | null = await this.userRepo.findOne({
-      where: { id: userId },
-      select: {
+    const user: User | null =
+      await this.userRepository.findNotDeletedNotBannedById(userId, undefined, {
         password_hash: true,
         id: true,
         first_name: true,
         last_name: true,
         email: true,
         username: true,
-      },
-    });
+      });
 
-    if (!user) {
-      throw new BadRequestException('User not found');
-    }
-
-    const isPassCorrect = await this.comparePassword(
+    const isPassCorrect = await comparePassword(
       currentPassword,
-      user.password_hash,
+      user?.password_hash || 'DUMMY_HASH',
     );
 
-    if (!isPassCorrect) {
-      throw new BadRequestException('Invalid current password');
+    if (!user || !isPassCorrect) {
+      throw new BadRequestException('Invalid credentials.');
     }
 
     // create password reset token
-    const resetPasswordToken: string = await this.createResetPasswordToken(
-      user.id,
-    );
+    const { token: resetPasswordToken, url: resetPasswordUrl } =
+      await this.createResetPasswordToken(user.id);
 
     if (!resetPasswordToken) {
       this.logger.error('Failed to create reset password token.');
-      return;
+      throw new InternalServerErrorException(
+        'Failed to request password change.',
+      );
     }
-
-    const resetPasswordUrl: string = this.embedTokenIntoUrl(
-      'auth/reset-password',
-      resetPasswordToken,
-    );
 
     const eventParams: AuthEventsPayload = {
       url: resetPasswordUrl,
@@ -340,10 +424,10 @@ export class AuthService {
       name: user.first_name || user.last_name || user.username,
     };
 
-    this.eventEmitter.emit('auth.change-password', eventParams);
+    this.eventEmitter.emit(SecurityEvents.PASSWORD_CHANGED, eventParams);
 
     return {
-      url: this.embedTokenIntoUrl('auth/reset-password', resetPasswordToken),
+      url: resetPasswordUrl,
       token: resetPasswordToken,
     };
   }
@@ -357,23 +441,20 @@ export class AuthService {
    * @returns A promise that resolves with void.
    */
   async forgotPassword(email: string): Promise<verificationTokens | void> {
-    const existingUser: User | null = await this.userRepo.findOneBy({ email });
+    const existingUser =
+      await this.userRepository.findNotDeletedNotBannedByEmail(email);
 
     if (!existingUser) return;
 
     // create password reset token
-    const resetPasswordToken: string = await this.createResetPasswordToken(
-      existingUser.id,
-    );
-
-    const resetPasswordUrl = this.embedTokenIntoUrl(
-      'auth/reset-password',
-      resetPasswordToken,
-    );
+    const { token: resetPasswordToken, url: resetPasswordUrl } =
+      await this.createResetPasswordToken(existingUser.id);
 
     if (!resetPasswordToken) {
       this.logger.error('Failed to create reset password token.');
-      return;
+      throw new InternalServerErrorException(
+        'Failed to request forget password.',
+      );
     }
 
     const eventParams: AuthEventsPayload = {
@@ -385,7 +466,7 @@ export class AuthService {
         existingUser.username,
     };
 
-    this.eventEmitter.emit('auth.forgot-password', eventParams);
+    this.eventEmitter.emit(SecurityEvents.PASSWORD_FORGOT, eventParams);
 
     return {
       url: resetPasswordUrl,
@@ -404,9 +485,11 @@ export class AuthService {
    * access and refresh tokens.
    */
   async resetPassword(newPassword: string, token: string): Promise<AuthTokens> {
+    const tokenHash = this.tokenService.hashToken(token);
+
     const resetToken: AuthToken | null = await this.tokenRepo.findOne({
       where: {
-        token_hash: this.tokenService.hashToken(token),
+        token_hash: tokenHash,
         type: AuthTokenType.PASSWORD_RESET,
         expires_at: MoreThan(new Date()),
       },
@@ -416,34 +499,73 @@ export class AuthService {
       throw new UnauthorizedException('Invalid or Expired Reset Token');
     }
 
-    await this.tokenRepo.remove(resetToken);
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
 
-    const user: User | null = await this.userRepo.findOneBy({
-      id: resetToken.user_id,
-    });
+    try {
+      const user = await queryRunner.manager.findOne(User, {
+        where: {
+          id: resetToken.user_id,
+        },
+        select: {
+          id: true,
+          first_name: true,
+          last_name: true,
+          username: true,
+          email: true,
+          status: true,
+          password_hash: true,
+          last_security_action_at: true,
+        },
+      });
 
-    if (!user) {
-      throw new BadRequestException('User Not Found.');
+      if (!user || user.status === AccountStatus.SOFT_DELETED) {
+        throw new BadRequestException('User not found.');
+      }
+
+      if (user.status === AccountStatus.BANNED) {
+        throw new BadRequestException('User is banned.');
+      }
+
+      // burn reset token + update password in one transaction.
+      await queryRunner.manager.remove(AuthToken, resetToken);
+
+      // Invalidate ALL existing refresh tokens for this user so that
+      // any stolen sessions are immediately revoked on password change.
+      await queryRunner.manager.delete(AuthToken, {
+        user_id: user.id,
+        type: AuthTokenType.REFRESH,
+      });
+
+      user.password_hash = await hashPassword(newPassword);
+      user.last_security_action_at = updateSecurityActionTime();
+      await queryRunner.manager.save(User, user);
+
+      // Issue new refresh token inside the transaction.
+      const rawRefreshToken = await this.tokenService.createRefreshToken(
+        user.id,
+        queryRunner.manager,
+      );
+
+      await queryRunner.commitTransaction();
+
+      const accessToken = this.tokenService.createAccessTokenOrThrow(
+        this.buildAccessPayload(user),
+      );
+
+      this.eventEmitter.emit(SecurityEvents.USER_SECURITY_UPDATE, {
+        user_id: user.id,
+        action: 'password-reset',
+      });
+
+      return { accessToken, refreshToken: rawRefreshToken };
+    } catch (err) {
+      await queryRunner.rollbackTransaction();
+      throw err;
+    } finally {
+      await queryRunner.release();
     }
-
-    user.password_hash = await this.hashPassword(newPassword);
-    user.last_security_action_at = new Date();
-
-    await this.userRepo.save(user);
-
-    this.eventEmitter.emit('security-update', {
-      user_id: resetToken.user_id,
-      action: 'password reset',
-    });
-
-    const refreshToken: string = await this.tokenService.createRefreshToken(
-      resetToken.user_id,
-    );
-    const accessToken: string = this.tokenService.createAccessToken(
-      this.AccessPayload(user),
-    );
-
-    return { accessToken, refreshToken };
   }
 
   /**
@@ -451,7 +573,9 @@ export class AuthService {
    * @param userId The User that password reset token belongs to.
    * @returns {Promise<string>}. The generated password reset token.
    */
-  private async createResetPasswordToken(userId: string): Promise<string> {
+  private async createResetPasswordToken(
+    userId: string,
+  ): Promise<verificationTokens> {
     const token: string = this.tokenService.generateRandomToken();
 
     const tokenRecord: CreateTokenDto = {
@@ -460,9 +584,11 @@ export class AuthService {
       token,
     };
 
+    const url = this.embedTokenIntoUrl('auth/reset-password', token);
+
     await this.tokenService.createTokenRecord(tokenRecord);
 
-    return token;
+    return { token, url };
   }
 
   /**
@@ -471,36 +597,23 @@ export class AuthService {
    * @param user The User that email verification token belongs to.
    * @returns {Promise<void>}.
    */
-  private async handleUserEmailVerification(
+  private async createEmailVerificationTokenAndUrl(
     user: User,
+    manager = this.dataSource.manager,
   ): Promise<verificationTokens> {
-    // delete old tokens
-    await this.tokenRepo.delete({
-      user_id: user.id,
-      type: AuthTokenType.EMAIL_VERIFY,
-    });
-
-    const token: string = this.tokenService.generateRandomToken();
-
-    // Generate verification token and URL
+    const token = this.tokenService.generateRandomToken();
     const url = this.embedTokenIntoUrl('auth/email/verify', token);
 
-    await this.tokenService.createTokenRecord({
-      user_id: user.id,
-      type: AuthTokenType.EMAIL_VERIFY,
-      token,
-    });
+    await this.tokenService.createTokenRecord(
+      {
+        user_id: user.id,
+        type: AuthTokenType.EMAIL_VERIFY,
+        token,
+      },
+      manager,
+    );
 
-    const eventParams: AuthEventsPayload = {
-      url,
-      email: user.email,
-      name: user.first_name || user.last_name || user.username,
-    };
-
-    // Fire event to (send email for verification)
-    this.eventEmitter.emit('auth.verificationEmail', eventParams);
-
-    return { token: token, url: url };
+    return { token, url };
   }
 
   /**
@@ -519,47 +632,86 @@ export class AuthService {
     const api: string = this.appConfig.apiPrefix;
 
     // BUG should be the frontend url
-    // e.g: http://localhost:3000/api/v1/auth/verify-email?token=...
+    // e.g: http://localhost:3000/auth/verify-email?token=...
     const url: string = `${baseUrl}/${api}/${route}?token=${token}`;
 
     return url;
   }
 
   /**
-   * Hashes a plain-text password using bcrypt.
+   * @private
    *
-   * @param password The plain-text password to hash.
-   * @returns {Promise<string>} The resulting password hash.
+   * Build access token payload.
+   * @param user The User that access token belongs to.
+   * @returns {AccessTokenPayload}.
    */
-  async hashPassword(password: string): Promise<string> {
-    return bcrypt.hash(password, PASSWORD_HASH_SALT_ROUNDS);
-  }
-
-  /**
-   * Compares a plain-text password against a stored bcrypt hash.
-   *
-   * @param password The plain-text password to check.
-   * @param hash The stored hash to compare against, defaults to an empty string.
-   * @returns {Promise<boolean>} True if the password matches the hash, false otherwise.
-   */
-  async comparePassword(password: string, hash: string = ''): Promise<boolean> {
-    if (!password || !hash) {
-      const missing = !password ? 'password' : 'hash';
-      this.logger.error(`Password comparison failed: missing ${missing}`);
-      return false; // safe fail for authentication
-    }
-
-    return await bcrypt.compare(password, hash);
-  }
-
-  private AccessPayload(user: User): AccessTokenPayload {
+  private buildAccessPayload(user: User): AccessTokenPayload {
     return {
       id: user.id,
       username: user.username,
       status: user.status,
       sys_role: user.system_role,
       club_id: user.club_id || null,
-      mem_role: user.member_role || undefined,
+      mem_role: user.member_role || TeamRole.NONE,
     };
+  }
+
+  /**
+   * @private
+   *
+   * Emits the verification-email event (fires AFTER the transaction commits to
+   * avoid triggering side-effects that cannot be rolled back).
+   */
+  private emitVerificationEmail(user: User, url: string): void {
+    const eventParams: AuthEventsPayload = {
+      url,
+      email: user.email,
+      name: user.first_name || user.last_name || user.username,
+    };
+    this.eventEmitter.emit(
+      SecurityEvents.EMAIL_VERIFICATION_REQUESTED,
+      eventParams,
+    );
+  }
+
+  /**
+   * Logs out the user by revoking all refresh tokens and updating security timestamp.
+   * This effectively invalidates all existing sessions.
+   *
+   * @param userId - The ID of the user logging out.
+   */
+  async logout(userId: string): Promise<void> {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      // 1. Revoke ALL refresh tokens for this user
+      await queryRunner.manager.delete(AuthToken, {
+        user_id: userId,
+        type: AuthTokenType.REFRESH,
+      });
+
+      // 2. Update last_security_action_at to invalidate any issued JWTs
+      // that are checked against this timestamp (e.g. in refresh/guards)
+      await queryRunner.manager.update(User, userId, {
+        last_security_action_at: updateSecurityActionTime(),
+      });
+
+      await queryRunner.commitTransaction();
+
+      this.eventEmitter.emit(SecurityEvents.LOGOUT, {
+        user_id: userId,
+        action: 'logout',
+      });
+
+      this.logger.info('User logged out and sessions revoked', { userId });
+    } catch (err) {
+      await queryRunner.rollbackTransaction();
+      this.logger.error('Logout failed', { userId });
+      throw err;
+    } finally {
+      await queryRunner.release();
+    }
   }
 }

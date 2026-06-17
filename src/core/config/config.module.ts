@@ -6,6 +6,7 @@ import {
   DatabaseConfig,
   AuthTokenConfig,
   MailConfig,
+  CloudinaryConfig,
 } from './configrations/index';
 
 /**
@@ -19,7 +20,19 @@ import {
       validationSchema: envValidationSchema,
     }),
   ],
-  providers: [AppConfig, DatabaseConfig, AuthTokenConfig, MailConfig],
-  exports: [AppConfig, DatabaseConfig, AuthTokenConfig, MailConfig],
+  providers: [
+    AppConfig,
+    DatabaseConfig,
+    AuthTokenConfig,
+    MailConfig,
+    CloudinaryConfig,
+  ],
+  exports: [
+    AppConfig,
+    DatabaseConfig,
+    AuthTokenConfig,
+    MailConfig,
+    CloudinaryConfig,
+  ],
 })
 export class ConfigModule {}

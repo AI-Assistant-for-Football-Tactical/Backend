@@ -56,7 +56,10 @@ Here is an example of how the `AuthModule` can emit an event to send a verificat
         const url = '...'; // some verification url
 
         // Fire event to (send email for verification)
-        this.eventEmitter.emit('auth.verificationEmail', eventMethodParameters);
+        this.eventEmitter.emit(
+          SecurityEvents.USER_SIGNUP,
+          eventMethodParameters,
+        );
 
         // ... more logic
       }

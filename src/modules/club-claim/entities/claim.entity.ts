@@ -1,15 +1,15 @@
 import { Entity, Column, ManyToOne, JoinColumn, Index } from 'typeorm';
 import { User } from '../../user/entities/user.entity';
-import { Club } from './club.entity';
+import { Club } from '../../club/entities/club.entity';
 import { ClaimStatus } from '../../../common/enums/claim-status.enum';
 import { BaseEntity } from '../../../common/entities/base.entity';
 
 /**
  * Represents a club ownership claim in the onboarding pipeline.
  *
- * Flow: User submits claim (PENDING) → Admin reviews (UNDER_REVIEW) →
+ * Flow: User submits claim (PENDING) →
  *       APPROVED (club created, user becomes OWNER) or REJECTED.
- *       User can CANCEL while PENDING or UNDER_REVIEW.
+ *       User can CANCEL while PENDING.
  *
  * @relation user     - The user who submitted the claim
  * @relation club     - The club linked on approval (null while pending)

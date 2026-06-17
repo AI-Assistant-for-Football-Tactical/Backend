@@ -1,7 +1,5 @@
 import { Entity, Column, ManyToOne, JoinColumn, Index } from 'typeorm';
 import { User } from '../../user/entities/user.entity';
-import { Club } from '../../club/entities/club.entity';
-import { Claim } from '../../club/entities/claim.entity';
 import { StorageFilePurpose } from '../../../common/enums/storage-file-purpose.enum';
 import { BaseEntity } from '../../../common/entities/base.entity';
 
@@ -19,23 +17,6 @@ import { BaseEntity } from '../../../common/entities/base.entity';
  */
 @Entity('storage_files')
 export class StorageFile extends BaseEntity {
-  /** Multi-tenancy: club that owns this file (nullable for public users) */
-  @Index()
-  @Column({ type: 'uuid', nullable: true })
-  claim_id: string | null;
-
-  @ManyToOne(() => Claim, { onDelete: 'SET NULL', nullable: true })
-  @JoinColumn({ name: 'claim_id' })
-  claim: Claim | null;
-
-  @Index()
-  @Column({ type: 'uuid', nullable: true })
-  club_id: string | null;
-
-  @ManyToOne(() => Club, { onDelete: 'SET NULL', nullable: true })
-  @JoinColumn({ name: 'club_id' })
-  club: Club | null;
-
   /** Who uploaded this file */
   @Index()
   @Column({ type: 'uuid' })
@@ -51,7 +32,7 @@ export class StorageFile extends BaseEntity {
   })
   purpose: StorageFilePurpose;
 
-  /** S3 object key (e.g. "claims/uuid/document.pdf") */
+  /** cloudinary object key (e.g. "claims/uuid/document.pdf") */
   @Column({ type: 'varchar', length: 1024 })
   file_key: string;
 

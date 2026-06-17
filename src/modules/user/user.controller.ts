@@ -7,6 +7,8 @@ import {
   Param,
   UseGuards,
   ParseUUIDPipe,
+  Query,
+  ForbiddenException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -19,12 +21,13 @@ import { UserService } from './user.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UserProfileResDto } from './dto/user-profile-res.dto';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
-import type { AccessTokenPayload } from '../auth/constants/token-payload.type';
+import { AccessTokenPayload } from '../auth/constants/token-payload.type';
 import { ValidationGuard } from '../../common/guards/validation.guard';
-import { SysRoles } from '../../common/decorators/roles.decorator';
-import { SystemRole } from '../../common/enums/system-role.enum';
 import { ResponseMessage } from '../../common/decorators/response-message.decorator';
 import { plainToInstance } from 'class-transformer';
+import { UserSearchQueryDto, UserSearchResultDto } from './dto/user-search.dto';
+import { UserPublicProfileResDto } from './dto/user-public-profile.dto';
+import { SystemRole } from 'src/common/enums/system-role.enum';
 
 @ApiTags('users')
 @ApiBearerAuth()
@@ -49,40 +52,98 @@ export class UserController {
 
   @Patch('me')
   @UseGuards(ValidationGuard(UpdateUserDto))
-  @ApiOperation({ summary: 'Update current user profile' })
+  @ApiOperation({
+    summary: 'Update current user profile - return updated fields only',
+  })
   @ApiOkResponse({ type: UserProfileResDto })
   @ResponseMessage('Profile updated successfully')
   async updateMyProfile(
     @CurrentUser() user: AccessTokenPayload,
     @Body() updateUserDto: UpdateUserDto,
-  ) {
+  ): Promise<Partial<UpdateUserDto>> {
     return this.userService.updateProfile(user.id, updateUserDto);
   }
 
-  @Patch('me/deactivate')
-  @ApiOperation({ summary: 'Deactivate your account' })
-  @ApiOkResponse({ description: 'Account deactivated' })
-  @ResponseMessage('Account deactivated')
-  async deactivateAccount(@CurrentUser() user: AccessTokenPayload) {
-    await this.userService.deactivateAccount(user.id);
-    return null;
-  }
-
   @Delete('me')
-  @ApiOperation({ summary: 'Soft delete your account' })
-  @ApiOkResponse({ description: 'Account soft deleted' })
-  @ResponseMessage('Account deleted')
-  async softDeleteAccount(@CurrentUser() user: AccessTokenPayload) {
+  @ApiOperation({ summary: 'Soft delete your account and favorites' })
+  @ApiOkResponse({ description: 'Account and favorites soft deleted' })
+  @ResponseMessage('Account and favorites deleted')
+  async softDeleteAccount(
+    @CurrentUser() user: AccessTokenPayload,
+  ): Promise<void> {
     await this.userService.softDeleteAccount(user.id);
-    return null;
   }
 
-  @Get(':id')
-  @SysRoles(SystemRole.ADMIN)
-  @ApiOperation({ summary: 'Admin: Get user by Id' })
-  @ApiNotFoundResponse({ description: 'User not found' })
-  @ApiOkResponse({ type: UserProfileResDto })
-  async getUserById(@Param('id', ParseUUIDPipe) id: string) {
-    return this.userService.findOneByIdOrFail(id);
+  /**
+   * Searches for users with filters and pagination.
+   *
+   * @param query - Search parameters.
+   */
+  @Get('')
+  @ApiOperation({
+    summary:
+      'Search and filter users - only public profile info is returned (admin accounts are not returned)',
+  })
+  @ApiOkResponse({
+    description: 'List of users returned successfully.',
+    type: UserSearchResultDto,
+  })
+  async searchUsers(
+    @Query() dto: UserSearchQueryDto,
+    @CurrentUser() user: AccessTokenPayload,
+  ): Promise<UserSearchResultDto> {
+    if (user.sys_role === SystemRole.USER) {
+      if (dto.system_role === undefined) {
+        dto.system_role = SystemRole.USER;
+      }
+      if (dto.system_role !== SystemRole.USER) {
+        throw new ForbiddenException('You are not authorized to get this user');
+      }
+    }
+    return this.userService.searchUsers(dto);
   }
+
+  /**
+   * Get user by ID
+   *
+   * @param id - User ID
+   */
+  @Get(':id')
+  @ApiOperation({
+    summary:
+      'Get user by Id only public info is returned (admin accounts are not returned)',
+  })
+  @ApiNotFoundResponse({ description: 'Invalid user ID' })
+  @ApiOkResponse({ type: UserPublicProfileResDto })
+  async getUserById(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: AccessTokenPayload,
+  ): Promise<UserPublicProfileResDto> {
+    return this.userService.findOneByIdOrFail(id, user);
+  }
+
+  /* TODO: Implement later */
+
+  // @Patch('me/deactivate')
+  // @ApiOperation({ summary: 'Deactivate your account' })
+  // @ApiOkResponse({ description: 'Account deactivated' })
+  // @ResponseMessage('Account deactivated')
+  // async deactivateAccount(
+  //   @CurrentUser() user: AccessTokenPayload,
+  // ): Promise<void> {
+  //   await this.userService.deactivateAccount(user.id);
+  // }
+
+  // @Patch('me/activate')
+  // @ApiOperation({ summary: 'Activate your deactivated account' })
+  // @ApiOkResponse({ description: 'Account activated' })
+  // @ResponseMessage('Account activated')
+  // async activateAccount(
+  //   @CurrentUser() user: AccessTokenPayload,
+  // ): Promise<UserProfileResDto> {
+  // userProfile = await this.userService.activateAccount(user.id);
+  //   return plainToInstance(UserProfileResDto, userProfile, {
+  //     excludeExtraneousValues: true,
+  //   });
+  // }
 }

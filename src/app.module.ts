@@ -4,7 +4,9 @@ import { CoreModule } from './core/core.module';
 import { UserModule } from './modules/user/user.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { ClubModule } from './modules/club/club.module';
+import { ClubClaimModule } from './modules/club-claim/club-claim.module';
 import { InvitationModule } from './modules/invitation/invitation.module';
+import { AdminModule } from './modules/admin/admin.module';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 import { TransformResponseInterceptor } from './common/interceptor/transform.interceptor';
@@ -14,6 +16,7 @@ import { PrematchModule } from './modules/prematch/prematch.module';
 import { PostmatchModule } from './modules/postmatch/postmatch.module';
 import { StorageModule } from './modules/storage/storage.module';
 import { InmatchModule } from './modules/inmatch/inmatch.module';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 
 /**
  * The root module of the application and the starting point.
@@ -27,11 +30,14 @@ import { InmatchModule } from './modules/inmatch/inmatch.module';
     UserModule,
     AuthModule,
     ClubModule,
+    ClubClaimModule,
     InvitationModule,
+    AdminModule,
     PrematchModule,
     PostmatchModule,
     InmatchModule,
     StorageModule,
+    EventEmitterModule.forRoot(),
   ],
   controllers: [AppController],
   providers: [

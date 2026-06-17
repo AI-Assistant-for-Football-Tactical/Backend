@@ -8,8 +8,8 @@ import {
   ParseUUIDPipe,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
-import { ResponseMessage } from 'src/common/decorators/response-message.decorator';
-import { CurrentUser } from 'src/common/decorators/current-user.decorator';
+import { ResponseMessage } from '../../common/decorators/response-message.decorator';
+import { CurrentUser } from '../..//common/decorators/current-user.decorator';
 import type { AccessTokenPayload } from '../auth/constants/token-payload.type';
 import { PostmatchService } from './postmatch.service';
 import type { PostMatchReport } from './entities/postmatch-report.entity';

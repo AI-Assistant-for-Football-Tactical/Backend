@@ -1,20 +1,10 @@
-import {
-  Entity,
-  Column,
-  ManyToOne,
-  JoinColumn,
-  CreateDateColumn,
-  PrimaryGeneratedColumn,
-  Index,
-} from 'typeorm';
+import { Entity, Column, ManyToOne, JoinColumn, Index } from 'typeorm';
 import { User } from '../../user/entities/user.entity';
 import { AuthTokenType } from '../constants/auth-token-type.enum';
+import { BaseEntity } from '../../../common/entities/base.entity';
 
 @Entity({ name: 'auth_tokens' })
-export class AuthToken {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
-
+export class AuthToken extends BaseEntity {
   @Index()
   @Column({ type: 'varchar', length: 250, nullable: false })
   token_hash: string;
@@ -32,9 +22,6 @@ export class AuthToken {
   @JoinColumn({ name: 'user_id' })
   user: User;
 
-  @Column({ type: 'timestamp' })
+  @Column({ type: 'timestamptz' })
   expires_at: Date;
-
-  @CreateDateColumn()
-  created_at: Date;
 }

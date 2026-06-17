@@ -8,7 +8,7 @@ import {
 } from 'typeorm';
 import { ClubStatus } from '../constants/club-status.enum';
 import { User } from '../../user/entities/user.entity';
-import { Claim } from './claim.entity';
+import { Claim } from '../../club-claim/entities/claim.entity';
 import { BaseEntity } from '../../../common/entities/base.entity';
 
 /**

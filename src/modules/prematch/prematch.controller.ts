@@ -1,8 +1,16 @@
 import { Controller, Get } from '@nestjs/common';
 import { PrematchService } from './prematch.service';
 import { PreMatchResDto } from './dto/prematch-dto';
-import { ApiOperation, ApiResponse } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
+import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 
+@ApiTags('Pre-Match Analysis')
+@ApiBearerAuth()
 @Controller('pre-match')
 export class PrematchController {
   constructor(private readonly prematchService: PrematchService) {}
@@ -19,7 +27,9 @@ export class PrematchController {
     description: 'External API is unreachable or returned invalid data.',
   })
   @Get()
-  async findAll(): Promise<PreMatchResDto> {
-    return await this.prematchService.preMatchData();
+  async getPreMath(
+    @CurrentUser('club_id') clubId: string,
+  ): Promise<PreMatchResDto> {
+    return await this.prematchService.preMatchData(clubId);
   }
 }

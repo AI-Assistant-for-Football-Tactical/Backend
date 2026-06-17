@@ -39,13 +39,20 @@ export const envValidationSchema = Joi.object({
   // --- Reset Password Token ---
   PASSWORD_RESET_TOKEN_TTL: Joi.string().required().default('15m'),
 
-  // --- Invitation Token ---
-  INVITATION_TOKEN_TTL: Joi.string().required().default('15m'),
-
   // --- Post-Match Analysis ---
   AI_SERVICE_URL: Joi.string().uri().required(),
   GEMINI_API_KEYS: Joi.string().optional(),
   GEMINI_MODEL: Joi.string().optional().default('gemini-2.0-flash'),
   GROQ_API_KEY: Joi.string().optional(),
   GROQ_MODEL: Joi.string().optional().default('llama-3.1-8b-instant'),
+
+  // --- Cloudinary ---
+  CLOUDINARY_URL: Joi.string()
+    .required()
+    .pattern(/^cloudinary:\/\/([^:]+):([^@]+)@(.+)$/)
+    .messages({
+      'string.pattern.base':
+        'CLOUDINARY_URL must follow the format: cloudinary://api_key:api_secret@cloud_name',
+    }),
+  CLOUDINARY_OVERWRITE: Joi.string().valid('true', 'false').default('false'),
 });

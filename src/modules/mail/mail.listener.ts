@@ -1,8 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { MailService } from './mail.service';
-import type { AuthEventsPayload } from '../auth/constants/auth-events-payload';
+import { AuthEventsPayload } from '../auth/constants/auth-events-payload';
 import { PinoLogger } from 'nestjs-pino';
+import { SecurityEvents } from '../../common/events/security.events';
+import {
+  InvitationEvents,
+  UserInvitedEvent,
+} from '../../common/events/invitation.events';
 
 @Injectable()
 export class MailListener {
@@ -16,7 +21,7 @@ export class MailListener {
    *
    * @param payload AuthEventsPayload (e.g: url, email, username);
    */
-  @OnEvent('auth.verificationEmail', { async: true })
+  @OnEvent(SecurityEvents.EMAIL_VERIFICATION_REQUESTED, { async: true })
   async sendEmailVerificationdEventHandle(payload: AuthEventsPayload) {
     const { email, name, url } = payload;
     try {
@@ -33,7 +38,7 @@ export class MailListener {
    *
    * @param payload AuthEventsPayload (e.g: url, email, username);
    */
-  @OnEvent('auth.forgot-password', { async: true })
+  @OnEvent(SecurityEvents.PASSWORD_FORGOT, { async: true })
   async sendResetPasswordEventHandle(payload: AuthEventsPayload) {
     const { email, name, url } = payload;
     try {
@@ -45,7 +50,7 @@ export class MailListener {
     }
   }
 
-  @OnEvent('auth.change-password', { async: true })
+  @OnEvent(SecurityEvents.PASSWORD_CHANGED, { async: true })
   async sendChangePasswordEventHandle(payload: AuthEventsPayload) {
     const { email, name, url } = payload;
     try {
@@ -54,6 +59,39 @@ export class MailListener {
       this.logger.info(`Successfully sent email to: ${payload.email}`);
     } catch (err) {
       this.logger.error(err, `Failed to send  email to: ${payload.email}`);
+    }
+  }
+
+  /**
+   * Handle Event When A User Is Invited To Join A Club
+   *
+   * @param payload UserInvitedEvent (email, actionUrl, clubName, clubId)
+   */
+  @OnEvent(InvitationEvents.USER_INVITED, { async: true })
+  async sendClubInvitationEventHandle(payload: UserInvitedEvent) {
+    const { email, actionUrl, clubName, clubId } = payload;
+    try {
+      this.logger.info(
+        `Attempting to send club invitation email to: ${email} for club: ${clubId}`,
+      );
+      const success = await this.mailService.sendInvitationEmail(
+        email,
+        clubName,
+        actionUrl,
+      );
+
+      if (!success) {
+        throw new Error('Failed to send club invitation email');
+      }
+
+      this.logger.info(
+        `Successfully sent club invitation email to: ${email} for club: ${clubId}`,
+      );
+    } catch (err) {
+      this.logger.error(
+        err,
+        `Failed to send club invitation email to: ${email} for club: ${clubId}`,
+      );
     }
   }
 }

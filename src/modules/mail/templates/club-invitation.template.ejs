@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Club Invitation</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif;
+      }
+      .container {
+        width: 100%;
+        max-width: 600px;
+        margin: 0 auto;
+        border-collapse: collapse;
+      }
+      .content {
+        padding: 30px;
+        background-color: #ffffff;
+        border-radius: 8px;
+      }
+      .header {
+        padding: 20px 30px;
+        background-color: #4a90e2;
+        color: #ffffff;
+        border-top-left-radius: 8px;
+        border-top-right-radius: 8px;
+      }
+      .button {
+        display: inline-block;
+        background-color: #4a90e2;
+        color: #ffffff;
+        padding: 12px 24px;
+        text-decoration: none;
+        border-radius: 5px;
+        font-weight: bold;
+        font-size: 16px;
+      }
+      .footer {
+        padding: 20px 30px;
+        font-size: 12px;
+        color: #999999;
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body style="margin: 0; padding: 0; background-color: #f4f4f4">
+    <table
+      width="100%"
+      border="0"
+      cellpadding="0"
+      cellspacing="0"
+      style="background-color: #f4f4f4; padding: 20px"
+    >
+      <tr>
+        <td align="center">
+          <table
+            class="container"
+            width="600"
+            border="0"
+            cellpadding="0"
+            cellspacing="0"
+            style="
+              width: 100%;
+              max-width: 600px;
+              margin: 0 auto;
+              background-color: #ffffff;
+              border-radius: 8px;
+              box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            "
+          >
+            <tr>
+              <td
+                class="header"
+                style="
+                  padding: 20px 30px;
+                  background-color: #4a90e2;
+                  color: #ffffff;
+                  border-top-left-radius: 8px;
+                  border-top-right-radius: 8px;
+                "
+              >
+                <h1 style="margin: 0; font-size: 24px">
+                  Club Invitation
+                </h1>
+              </td>
+            </tr>
+
+            <tr>
+              <td
+                class="content"
+                style="
+                  padding: 40px;
+                  font-size: 16px;
+                  line-height: 1.6;
+                  color: #333333;
+                "
+              >
+                <h2 style="margin: 0 0 20px 0; color: #333333">
+                  You have been invited to join <%= clubName %>.
+                </h2>
+
+                <p style="margin: 0 0 20px 0">
+                  A club manager has invited you to join their team workspace.
+                  Use the button below to review and respond to the invitation.
+                </p>
+
+                <table
+                  border="0"
+                  cellpadding="0"
+                  cellspacing="0"
+                  role="presentation"
+                >
+                  <tr>
+                    <td align="center">
+                      <a
+                        href="<%= invitationUrl %>"
+                        target="_blank"
+                        class="button"
+                        style="
+                          display: inline-block;
+                          background-color: #4a90e2;
+                          color: #ffffff;
+                          padding: 12px 24px;
+                          text-decoration: none;
+                          border-radius: 5px;
+                          font-weight: bold;
+                          font-size: 16px;
+                        "
+                      >
+                        Review Invitation
+                      </a>
+                    </td>
+                  </tr>
+                </table>
+
+                <p style="margin: 30px 0 0 0; font-size: 14px; color: #777777">
+                  This invitation link will expire in 7 days.
+                </p>
+
+                <p style="margin: 20px 0 0 0; font-size: 14px; color: #777777">
+                  If you're having trouble, copy and paste this link into your
+                  browser:
+                  <br />
+                  <a
+                    href="<%= invitationUrl %>"
+                    target="_blank"
+                    style="
+                      color: #4a90e2;
+                      text-decoration: underline;
+                      word-break: break-all;
+                    "
+                  >
+                    <%= invitationUrl %>
+                  </a>
+                </p>
+              </td>
+            </tr>
+
+            <tr>
+              <td
+                class="footer"
+                style="
+                  padding: 20px 30px;
+                  font-size: 12px;
+                  color: #999999;
+                  text-align: center;
+                  background-color: #f9f9f9;
+                  border-bottom-left-radius: 8px;
+                  border-bottom-right-radius: 8px;
+                "
+              >
+                <p style="margin: 0">&copy; 2025 Shalaboka. All rights reserved.</p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

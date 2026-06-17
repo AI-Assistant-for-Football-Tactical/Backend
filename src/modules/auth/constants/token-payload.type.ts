@@ -1,4 +1,4 @@
-import type { MemberRole } from '../../../common/enums/member-role.enum';
+import type { TeamRole } from '../../../common/enums/team-role.enum';
 import type { SystemRole } from '../../../common/enums/system-role.enum';
 
 export type AccessTokenPayload = {
@@ -7,5 +7,5 @@ export type AccessTokenPayload = {
   status: string;
   sys_role: SystemRole;
   club_id: string | null;
-  mem_role: MemberRole | undefined;
+  mem_role: TeamRole;
 };

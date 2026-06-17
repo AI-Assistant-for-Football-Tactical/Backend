@@ -1,7 +1,7 @@
 # Post-Match Analysis — API Documentation
 
 > **Version:** 1.0  
-> **Base URL:** `/api/v1/post-match`  
+> **Base URL:** `/post-match`  
 > **Auth:** All endpoints require a valid JWT Bearer token.
 
 ---
@@ -21,12 +21,12 @@ The Post-Match Analysis feature allows authenticated club members to generate AI
 
 ### Key Concepts
 
-| Concept | Description |
-|---------|------------|
-| **Report** | A stored analysis result for a specific match and team |
-| **Cached** | If a report already exists for a match + team pair, it is returned without re-running the AI |
-| **COMPLETED** | Report has both raw AI analysis AND LLM explanation |
-| **PARTIAL** | Report has raw AI analysis but the LLM explanation failed |
+| Concept       | Description                                                                                  |
+| ------------- | -------------------------------------------------------------------------------------------- |
+| **Report**    | A stored analysis result for a specific match and team                                       |
+| **Cached**    | If a report already exists for a match + team pair, it is returned without re-running the AI |
+| **COMPLETED** | Report has both raw AI analysis AND LLM explanation                                          |
+| **PARTIAL**   | Report has raw AI analysis but the LLM explanation failed                                    |
 
 ---
 
@@ -35,29 +35,29 @@ The Post-Match Analysis feature allows authenticated club members to generate AI
 ### 2.1 Trigger Post-Match Analysis
 
 ```
-POST /api/v1/post-match/analyze
+POST /post-match/analyze
 ```
 
 Runs the full analysis pipeline for a match. Returns a cached report if one already exists.
 
 #### Headers
 
-| Header | Value | Required |
-|--------|-------|:--------:|
-| `Authorization` | `Bearer <jwt_token>` | ✅ |
-| `Content-Type` | `application/json` | ✅ |
+| Header          | Value                | Required |
+| --------------- | -------------------- | :------: |
+| `Authorization` | `Bearer <jwt_token>` |    ✅    |
+| `Content-Type`  | `application/json`   |    ✅    |
 
 #### Request Body
 
-| Field | Type | Required | Description |
-|-------|------|:--------:|------------|
-| `eventId` | `string` | ✅ | SofaScore event/match identifier |
-| `teamId` | `string` | ✅ | SofaScore team identifier to analyze for |
+| Field     | Type     | Required | Description                              |
+| --------- | -------- | :------: | ---------------------------------------- |
+| `eventId` | `string` |    ✅    | SofaScore event/match identifier         |
+| `teamId`  | `string` |    ✅    | SofaScore team identifier to analyze for |
 
 #### Request Example
 
 ```json
-POST /api/v1/post-match/analyze
+POST /post-match/analyze
 Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
 
 {
@@ -119,28 +119,28 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
 ### 2.2 List Reports
 
 ```
-GET /api/v1/post-match/reports
+GET /post-match/reports
 ```
 
 Returns a paginated list of report summaries belonging to the user's club. Does NOT include `rawAnalysis` or `llmExplanation`.
 
 #### Headers
 
-| Header | Value | Required |
-|--------|-------|:--------:|
-| `Authorization` | `Bearer <jwt_token>` | ✅ |
+| Header          | Value                | Required |
+| --------------- | -------------------- | :------: |
+| `Authorization` | `Bearer <jwt_token>` |    ✅    |
 
 #### Query Parameters
 
-| Param | Type | Default | Min | Max | Description |
-|-------|------|:-------:|:---:|:---:|------------|
-| `page` | `integer` | `1` | `1` | — | Page number |
-| `limit` | `integer` | `10` | `1` | `50` | Items per page |
+| Param   | Type      | Default | Min | Max  | Description    |
+| ------- | --------- | :-----: | :-: | :--: | -------------- |
+| `page`  | `integer` |   `1`   | `1` |  —   | Page number    |
+| `limit` | `integer` |  `10`   | `1` | `50` | Items per page |
 
 #### Request Example
 
 ```
-GET /api/v1/post-match/reports?page=1&limit=10
+GET /post-match/reports?page=1&limit=10
 Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
 ```
 
@@ -175,27 +175,27 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
 ### 2.3 Get Single Report
 
 ```
-GET /api/v1/post-match/reports/:id
+GET /post-match/reports/:id
 ```
 
 Returns the full report including raw analysis and LLM explanation.
 
 #### Headers
 
-| Header | Value | Required |
-|--------|-------|:--------:|
-| `Authorization` | `Bearer <jwt_token>` | ✅ |
+| Header          | Value                | Required |
+| --------------- | -------------------- | :------: |
+| `Authorization` | `Bearer <jwt_token>` |    ✅    |
 
 #### Path Parameters
 
-| Param | Type | Description |
-|-------|------|------------|
-| `id` | `UUID` | Report identifier (must be a valid UUID) |
+| Param | Type   | Description                              |
+| ----- | ------ | ---------------------------------------- |
+| `id`  | `UUID` | Report identifier (must be a valid UUID) |
 
 #### Request Example
 
 ```
-GET /api/v1/post-match/reports/a1b2c3d4-e5f6-7890-abcd-ef1234567890
+GET /post-match/reports/a1b2c3d4-e5f6-7890-abcd-ef1234567890
 Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
 ```
 
@@ -208,27 +208,27 @@ Same shape as the analyze response. The `cached` field is always `true` for this
 ### 2.4 Retry LLM Explanation
 
 ```
-POST /api/v1/post-match/reports/:id/explain
+POST /post-match/reports/:id/explain
 ```
 
 Retries the LLM explanation step for a report that has status `PARTIAL`. Does NOT re-run the AI analysis.
 
 #### Headers
 
-| Header | Value | Required |
-|--------|-------|:--------:|
-| `Authorization` | `Bearer <jwt_token>` | ✅ |
+| Header          | Value                | Required |
+| --------------- | -------------------- | :------: |
+| `Authorization` | `Bearer <jwt_token>` |    ✅    |
 
 #### Path Parameters
 
-| Param | Type | Description |
-|-------|------|------------|
-| `id` | `UUID` | Report identifier (must be a valid UUID) |
+| Param | Type   | Description                              |
+| ----- | ------ | ---------------------------------------- |
+| `id`  | `UUID` | Report identifier (must be a valid UUID) |
 
 #### Request Example
 
 ```
-POST /api/v1/post-match/reports/a1b2c3d4-e5f6-7890-abcd-ef1234567890/explain
+POST /post-match/reports/a1b2c3d4-e5f6-7890-abcd-ef1234567890/explain
 Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
 ```
 
@@ -244,29 +244,29 @@ Same shape as the analyze response. The `cached` field is `false`. Status change
 
 ### Full Report Response
 
-| Field | Type | Nullable | Description |
-|-------|------|:--------:|------------|
-| `id` | `string (UUID)` | No | Unique report identifier |
-| `eventId` | `string` | No | SofaScore event/match ID |
-| `teamId` | `string` | No | SofaScore team ID |
-| `status` | `string` | No | `"COMPLETED"` or `"PARTIAL"` |
-| `rawAnalysis` | `object` | No | Full structured AI analysis JSON |
-| `llmExplanation` | `string \| null` | Yes | Human-readable analysis. `null` when status is `PARTIAL` |
-| `llmModel` | `string \| null` | Yes | LLM model used (e.g., `"gemini-2.0-flash"`). `null` when status is `PARTIAL` |
-| `analysisTimestamp` | `string \| null` | Yes | ISO timestamp from the AI. May be `null` if AI omits it |
-| `createdAt` | `string` | No | ISO timestamp when the report was created |
-| `cached` | `boolean` | No | `true` if returned from cache, `false` if freshly generated |
+| Field               | Type             | Nullable | Description                                                                  |
+| ------------------- | ---------------- | :------: | ---------------------------------------------------------------------------- |
+| `id`                | `string (UUID)`  |    No    | Unique report identifier                                                     |
+| `eventId`           | `string`         |    No    | SofaScore event/match ID                                                     |
+| `teamId`            | `string`         |    No    | SofaScore team ID                                                            |
+| `status`            | `string`         |    No    | `"COMPLETED"` or `"PARTIAL"`                                                 |
+| `rawAnalysis`       | `object`         |    No    | Full structured AI analysis JSON                                             |
+| `llmExplanation`    | `string \| null` |   Yes    | Human-readable analysis. `null` when status is `PARTIAL`                     |
+| `llmModel`          | `string \| null` |   Yes    | LLM model used (e.g., `"gemini-2.0-flash"`). `null` when status is `PARTIAL` |
+| `analysisTimestamp` | `string \| null` |   Yes    | ISO timestamp from the AI. May be `null` if AI omits it                      |
+| `createdAt`         | `string`         |    No    | ISO timestamp when the report was created                                    |
+| `cached`            | `boolean`        |    No    | `true` if returned from cache, `false` if freshly generated                  |
 
 ### Report Summary Response (List Endpoint)
 
-| Field | Type | Nullable | Description |
-|-------|------|:--------:|------------|
-| `id` | `string (UUID)` | No | Unique report identifier |
-| `eventId` | `string` | No | SofaScore event/match ID |
-| `teamId` | `string` | No | SofaScore team ID |
-| `status` | `string` | No | `"COMPLETED"` or `"PARTIAL"` |
-| `analysisTimestamp` | `string \| null` | Yes | ISO timestamp from the AI |
-| `createdAt` | `string` | No | ISO timestamp when the report was created |
+| Field               | Type             | Nullable | Description                               |
+| ------------------- | ---------------- | :------: | ----------------------------------------- |
+| `id`                | `string (UUID)`  |    No    | Unique report identifier                  |
+| `eventId`           | `string`         |    No    | SofaScore event/match ID                  |
+| `teamId`            | `string`         |    No    | SofaScore team ID                         |
+| `status`            | `string`         |    No    | `"COMPLETED"` or `"PARTIAL"`              |
+| `analysisTimestamp` | `string \| null` |   Yes    | ISO timestamp from the AI                 |
+| `createdAt`         | `string`         |    No    | ISO timestamp when the report was created |
 
 ---
 
@@ -297,11 +297,8 @@ All error responses follow this structure:
   "timestamp": "2026-04-21T01:30:00.000Z",
   "success": false,
   "errorType": "Bad Request",
-  "messages": [
-    "eventId is required.",
-    "teamId is required."
-  ],
-  "path": "/api/v1/post-match/analyze"
+  "messages": ["eventId is required.", "teamId is required."],
+  "path": "/post-match/analyze"
 }
 ```
 
@@ -313,10 +310,8 @@ All error responses follow this structure:
   "timestamp": "2026-04-21T01:30:00.000Z",
   "success": false,
   "errorType": "Bad Request",
-  "messages": [
-    "Validation failed (uuid is expected)"
-  ],
-  "path": "/api/v1/post-match/reports/not-a-uuid"
+  "messages": ["Validation failed (uuid is expected)"],
+  "path": "/post-match/reports/not-a-uuid"
 }
 ```
 
@@ -332,10 +327,8 @@ All error responses follow this structure:
   "timestamp": "2026-04-21T01:30:00.000Z",
   "success": false,
   "errorType": "Unauthorized",
-  "messages": [
-    "Unauthorized"
-  ],
-  "path": "/api/v1/post-match/analyze"
+  "messages": ["Unauthorized"],
+  "path": "/post-match/analyze"
 }
 ```
 
@@ -351,10 +344,8 @@ All error responses follow this structure:
   "timestamp": "2026-04-21T01:30:00.000Z",
   "success": false,
   "errorType": "Forbidden",
-  "messages": [
-    "No club membership found."
-  ],
-  "path": "/api/v1/post-match/analyze"
+  "messages": ["No club membership found."],
+  "path": "/post-match/analyze"
 }
 ```
 
@@ -366,10 +357,8 @@ All error responses follow this structure:
   "timestamp": "2026-04-21T01:30:00.000Z",
   "success": false,
   "errorType": "Forbidden",
-  "messages": [
-    "You can only analyze your own team."
-  ],
-  "path": "/api/v1/post-match/analyze"
+  "messages": ["You can only analyze your own team."],
+  "path": "/post-match/analyze"
 }
 ```
 
@@ -381,10 +370,8 @@ All error responses follow this structure:
   "timestamp": "2026-04-21T01:30:00.000Z",
   "success": false,
   "errorType": "Forbidden",
-  "messages": [
-    "You do not have access to this club's reports."
-  ],
-  "path": "/api/v1/post-match/reports/a1b2c3d4-..."
+  "messages": ["You do not have access to this club's reports."],
+  "path": "/post-match/reports/a1b2c3d4-..."
 }
 ```
 
@@ -400,10 +387,8 @@ All error responses follow this structure:
   "timestamp": "2026-04-21T01:30:00.000Z",
   "success": false,
   "errorType": "Not Found",
-  "messages": [
-    "Report with id \"a1b2c3d4-...\" not found."
-  ],
-  "path": "/api/v1/post-match/reports/a1b2c3d4-..."
+  "messages": ["Report with id \"a1b2c3d4-...\" not found."],
+  "path": "/post-match/reports/a1b2c3d4-..."
 }
 ```
 
@@ -415,10 +400,8 @@ All error responses follow this structure:
   "timestamp": "2026-04-21T01:30:00.000Z",
   "success": false,
   "errorType": "Not Found",
-  "messages": [
-    "Club not found."
-  ],
-  "path": "/api/v1/post-match/analyze"
+  "messages": ["Club not found."],
+  "path": "/post-match/analyze"
 }
 ```
 
@@ -434,10 +417,8 @@ All error responses follow this structure:
   "timestamp": "2026-04-21T01:30:00.000Z",
   "success": false,
   "errorType": "Conflict",
-  "messages": [
-    "This report already has a complete LLM explanation."
-  ],
-  "path": "/api/v1/post-match/reports/a1b2c3d4-.../explain"
+  "messages": ["This report already has a complete LLM explanation."],
+  "path": "/post-match/reports/a1b2c3d4-.../explain"
 }
 ```
 
@@ -453,22 +434,20 @@ All error responses follow this structure:
   "timestamp": "2026-04-21T01:30:00.000Z",
   "success": false,
   "errorType": "Bad Gateway",
-  "messages": [
-    "AI analysis service timed out. Please try again later."
-  ],
-  "path": "/api/v1/post-match/analyze"
+  "messages": ["AI analysis service timed out. Please try again later."],
+  "path": "/post-match/analyze"
 }
 ```
 
 Other possible 502 messages:
 
-| Message | Cause |
-|---------|-------|
-| `"Cannot connect to the AI analysis service."` | AI service is down |
-| `"AI analysis service returned an error (HTTP 500)."` | AI returned a server error |
-| `"AI analysis service returned invalid data format."` | Response was not a valid JSON object |
-| `"AI service returned invalid data: ..."` | Response failed validation (missing fields) |
-| `"LLM service is currently unavailable. Please try again later."` | All LLM adapters failed during retry |
+| Message                                                           | Cause                                       |
+| ----------------------------------------------------------------- | ------------------------------------------- |
+| `"Cannot connect to the AI analysis service."`                    | AI service is down                          |
+| `"AI analysis service returned an error (HTTP 500)."`             | AI returned a server error                  |
+| `"AI analysis service returned invalid data format."`             | Response was not a valid JSON object        |
+| `"AI service returned invalid data: ..."`                         | Response failed validation (missing fields) |
+| `"LLM service is currently unavailable. Please try again later."` | All LLM adapters failed during retry        |
 
 ---
 
@@ -495,12 +474,12 @@ The user's club has a `sofa_score_club_id` field (e.g., `"44"` for Liverpool). T
 
 ### Summary
 
-| Endpoint | Checks Applied |
-|----------|---------------|
-| `POST /analyze` | Club membership → Team ownership → Club match (cache hit) |
-| `GET /reports` | Club membership → SQL WHERE filter |
-| `GET /reports/:id` | Club membership → Club ownership of report |
-| `POST /reports/:id/explain` | Same as GET report |
+| Endpoint                    | Checks Applied                                            |
+| --------------------------- | --------------------------------------------------------- |
+| `POST /analyze`             | Club membership → Team ownership → Club match (cache hit) |
+| `GET /reports`              | Club membership → SQL WHERE filter                        |
+| `GET /reports/:id`          | Club membership → Club ownership of report                |
+| `POST /reports/:id/explain` | Same as GET report                                        |
 
 ---
 
@@ -568,10 +547,10 @@ The user's club has a `sofa_score_club_id` field (e.g., `"44"` for Liverpool). T
 
 ### Status Values
 
-| Status | Meaning | `llmExplanation` | `llmModel` | Can Retry? |
-|--------|---------|:-----------------:|:----------:|:----------:|
-| `COMPLETED` | Has both AI data and LLM explanation | `string` | `string` | ❌ (409) |
-| `PARTIAL` | Has AI data but LLM explanation failed | `null` | `null` | ✅ |
+| Status      | Meaning                                | `llmExplanation` | `llmModel` | Can Retry? |
+| ----------- | -------------------------------------- | :--------------: | :--------: | :--------: |
+| `COMPLETED` | Has both AI data and LLM explanation   |     `string`     |  `string`  |  ❌ (409)  |
+| `PARTIAL`   | Has AI data but LLM explanation failed |      `null`      |   `null`   |     ✅     |
 
 ---
 
@@ -615,14 +594,15 @@ The `POST /analyze` endpoint may take **up to 60 seconds** on the first call for
 
 ### The `cached` Flag
 
-| Value | Meaning |
-|:-----:|---------|
-| `true` | Report was returned from cache (instant) |
+|  Value  | Meaning                                             |
+| :-----: | --------------------------------------------------- |
+| `true`  | Report was returned from cache (instant)            |
 | `false` | Report was freshly generated (AI + LLM were called) |
 
 ### Partial Reports
 
 If `status === "PARTIAL"`:
+
 - `llmExplanation` and `llmModel` will be `null`
 - The raw AI data is still available in `rawAnalysis`
 - Show a "Retry Explanation" button that calls `POST /reports/:id/explain`
@@ -648,9 +628,9 @@ If `status === "PARTIAL"`:
 
 ## 10. Quick Reference
 
-| Action | Method | Endpoint | Body |
-|--------|:------:|----------|:----:|
-| Analyze a match | `POST` | `/api/v1/post-match/analyze` | ✅ |
-| List my reports | `GET` | `/api/v1/post-match/reports` | ❌ |
-| Get a report | `GET` | `/api/v1/post-match/reports/:id` | ❌ |
-| Retry explanation | `POST` | `/api/v1/post-match/reports/:id/explain` | ❌ |
+| Action            | Method | Endpoint                          | Body |
+| ----------------- | :----: | --------------------------------- | :--: |
+| Analyze a match   | `POST` | `/post-match/analyze`             |  ✅  |
+| List my reports   | `GET`  | `/post-match/reports`             |  ❌  |
+| Get a report      | `GET`  | `/post-match/reports/:id`         |  ❌  |
+| Retry explanation | `POST` | `/post-match/reports/:id/explain` |  ❌  |
