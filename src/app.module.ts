@@ -13,7 +13,7 @@ import { JwtAuthGuard } from './modules/auth/guards/jwt.guard';
 import { PrematchModule } from './modules/prematch/prematch.module';
 import { PostmatchModule } from './modules/postmatch/postmatch.module';
 import { StorageModule } from './modules/storage/storage.module';
-
+import { InmatchModule } from './modules/inmatch/inmatch.module';
 
 /**
  * The root module of the application and the starting point.
@@ -30,6 +30,7 @@ import { StorageModule } from './modules/storage/storage.module';
     InvitationModule,
     PrematchModule,
     PostmatchModule,
+    InmatchModule,
     StorageModule,
   ],
   controllers: [AppController],

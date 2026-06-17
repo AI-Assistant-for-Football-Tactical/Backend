@@ -2,7 +2,6 @@ import { Controller, Get } from '@nestjs/common';
 import { InmatchService } from './inmatch.service';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { Public } from 'src/common/decorators/public-endpoint.decorator';
 
 /**
  * Controller for in-match analysis endpoints.
