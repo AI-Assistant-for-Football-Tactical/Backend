@@ -27,7 +27,6 @@ export class InmatchController {
    * @throws {NotFoundException} If the club, event, or opponent cannot be resolved.
    * @throws {InternalServerErrorException} If the AI provider call fails.
    */
-  @Public()
   @Get()
   getInMatch(@CurrentUser('club_id') clubId: string) {
     return this.inmatchService.inMatchData(clubId);
