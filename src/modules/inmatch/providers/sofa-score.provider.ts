@@ -90,7 +90,7 @@ export class SofaScoreProvider {
         `/teams/${teamId}/events/last/0`,
       );
 
-      const eventId = data?.events?.[0]?.id;
+      const eventId = data?.events?.[data.events.length - 1]?.id;
 
       if (!eventId) {
         this.logger.warn(
