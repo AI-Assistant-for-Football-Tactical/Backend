@@ -52,9 +52,9 @@ export class InmatchService {
     this.logger.info(`[Club ${clubId}] Received inMatchData request`);
     if (this.isAiProcessing) {
       this.logger.warn(
-        `[Club ${clubId}] AI is currently processing — rejecting request`,
+        `[Club ${clubId}] There is a request in progress — rejecting request`,
       );
-      throw new HttpException('wait 1 minute', HttpStatus.TOO_MANY_REQUESTS);
+      throw new HttpException('wait 12 minute', HttpStatus.TOO_MANY_REQUESTS);
     }
 
     const cached = this.cache.get(clubId);
@@ -178,7 +178,7 @@ export class InmatchService {
       return inMatchData;
     } catch (error) {
       this.logger.error(
-        `[Club ${clubId}] Failed to save in-match data`,
+        `[Club ${clubId}] Failed to fetch in-match analysis`,
         error instanceof Error ? error.message : String(error),
       );
       throw new InternalServerErrorException(
